@@ -1,0 +1,6 @@
+{
+    "$schema": "https://raw.githubusercontent.com/odin-lang/oconv/master/schema.json",
+    "name": "odin-webui-app",
+    "version": "1.0.0",
+    "dependencies": {}
+}

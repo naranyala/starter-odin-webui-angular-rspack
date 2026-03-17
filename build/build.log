@@ -1,0 +1,69 @@
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/main.odin(14:3) Error: 'context' has not been defined within this scope, but is required for this procedure call 
+	fmt.printf("[Odin Backend] Received greeting from: %s\n ... 
+	^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ... 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/main.odin(16:32) Error: Cannot assign value 'response_str' of type 'string' to 'cstring' in a procedure argument 
+	webui.webui_return_string(e, response_str) 
+	                             ^~~~~~~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/main.odin(24:3) Error: 'context' has not been defined within this scope, but is required for this procedure call 
+	fmt.printf("[Odin Backend] Received data: %s\n", data_str) 
+	^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/main.odin(26:32) Error: Cannot assign value 'response_str' of type 'string' to 'cstring' in a procedure argument 
+	webui.webui_return_string(e, response_str) 
+	                             ^~~~~~~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(103:93) Error: Cannot cast 'content' as 'cstring' from 'string' 
+	... tring) -> bool { return webui_show(win, cast(cstring) content) } 
+	                                                          ^~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(104:128) Error: Cannot cast 'content' as 'cstring' from 'string' 
+	... return webui_show_browser(win, cast(cstring) content, browser) } 
+	                                                 ^~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(105:104) Error: Cannot cast 'content' as 'cstring' from 'string' 
+	... ng) -> bool { return webui_show_wv(win, cast(cstring) content) } 
+	                                                          ^~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(112:97) Error: Cannot cast 'path' as 'cstring' from 'string' 
+	... ath : string) { webui_set_root_folder(win, cast(cstring) path) } 
+	                                                             ^~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(113:94) Error: Cannot cast 'path' as 'cstring' from 'string' 
+	...  : string) { webui_set_default_root_folder(cast(cstring) path) } 
+	                                                             ^~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(118:103) Error: Cannot cast 'icon' as 'cstring' from 'string' 
+	... bui_set_icon(win, cast(cstring) icon, cast(cstring) icon_type) } 
+	                                    ^~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(118:123) Error: Cannot cast 'icon_type' as 'cstring' from 'string' 
+	... bui_set_icon(win, cast(cstring) icon, cast(cstring) icon_type) } 
+	                                                        ^~~~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(119:104) Error: Cannot cast 'name' as 'cstring' from 'string' 
+	... webui_set_profile(win, cast(cstring) name, cast(cstring) path) } 
+	                                         ^~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(119:124) Error: Cannot cast 'path' as 'cstring' from 'string' 
+	... webui_set_profile(win, cast(cstring) name, cast(cstring) path) } 
+	                                                             ^~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(120:93) Error: Cannot cast 'proxy_server' as 'cstring' from 'string' 
+	... r : string) { webui_set_proxy(win, cast(cstring) proxy_server) } 
+	                                                     ^~~~~~~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(125:138) Error: Cannot cast 'certificate_pem' as 'cstring' from 'string' 
+	... (cast(cstring) certificate_pem, cast(cstring) private_key_pem) } 
+	                   ^~~~~~~~~~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(125:169) Error: Cannot cast 'private_key_pem' as 'cstring' from 'string' 
+	... (cast(cstring) certificate_pem, cast(cstring) private_key_pem) } 
+	                                                  ^~~~~~~~~~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(126:123) Error: Cannot cast 'element' as 'cstring' from 'string' 
+	... d_ID { return webui_bind(win, cast(cstring) element, callback) } 
+	                                                ^~~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(127:75) Error: Cannot cast 'script' as 'cstring' from 'string' 
+	... indow, script : string) { webui_run(win, cast(cstring) script) } 
+	                                                           ^~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(128:131) Error: Cannot cast 'script' as 'cstring' from 'string' 
+	... string) script, timeout, cast(cstring) &buffer[0], len(buffer)) ... 
+	            ^~~~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(129:82) Error: Cannot cast 'url' as 'cstring' from 'string' 
+	... Window, url : string) { webui_navigate(win, cast(cstring) url) } 
+	                                                              ^~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(141:92) Error: Cannot cast 's' as 'cstring' from 'string' 
+	...  ^Event, s : string) { webui_return_string(e, cast(cstring) s) } 
+	                                                                ^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(143:83) Error: Cannot cast 'data' as 'cstring' from 'string' 
+	... string) data); if encoded_c == nil { return "" }; defer webui_f ... 
+	            ^~~^ 
+/run/media/naranyala/Data/projects-remote/odin-webui-angular-rspack/webui_lib/webui.odin(144:83) Error: Cannot cast 'data' as 'cstring' from 'string' 
+	... string) data); if decoded_c == nil { return "" }; defer webui_f ... 
+	            ^~~^ 
