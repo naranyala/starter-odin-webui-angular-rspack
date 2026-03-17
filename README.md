@@ -1,58 +1,351 @@
 # Odin WebUI Angular Rspack
 
-A complete full-stack application framework combining Odin backend with Angular frontend through WebUI bridge.
-
-## Project Overview
-
-This project provides a complete development environment for building desktop applications using:
-
-- **Backend**: Odin programming language with WebUI library
+A full-stack desktop application framework combining:
+- **Backend**: Odin programming language
 - **Frontend**: Angular with Rspack bundler
 - **Communication**: WebUI bridge for backend-frontend communication
-- **Build System**: Automated build pipeline for all components
+- **DI System**: Angular-inspired dependency injection
 
-## Directory Structure
+## Table of Contents
+
+1. [Architecture Overview](#architecture-overview)
+2. [Backend-Frontend Communication](#backend-frontend-communication)
+3. [Dependency Injection System](#dependency-injection-system)
+4. [Services](#services)
+5. [Event System](#event-system)
+6. [Quick Start](#quick-start)
+7. [Build & Run](#build--run)
+
+---
+
+## Architecture Overview
 
 ```
-odin-webui-angular-rspack/
-├── main.odin                 # Main Odin application entry point
-├── run.sh                    # Build and run pipeline script
-├── build.sh                  # Legacy build script
-├── src/                      # Organized source code
-│   ├── core/                 # Core application code
-│   ├── lib/                  # Library modules
-│   ├── models/               # Data models
-│   ├── services/             # Application services
-│   └── features/             # Feature modules
-├── testing/                  # Test framework
-├── tests/                    # Test suites
-├── errors/                   # Error handling package
-├── di/                       # Dependency Injection system
-├── comms/                    # Communication layer
-├── utils/                    # Utility modules
-├── webui_lib/                # WebUI Odin bindings
-├── frontend/                 # Angular application
-│   ├── angular.json          # Angular configuration
-│   ├── src/                  # Angular source code
-│   └── dist/                 # Angular build output
-├── examples/                 # Example applications
-├── thirdparty/               # Third-party libraries
-│   └── webui/                # WebUI library source
-├── build/                    # Compiled binaries
-├── dist/                     # Distribution package
-└── docs/                     # Documentation
+┌─────────────────────────────────────────────────────────────────┐
+│                      Angular Frontend                            │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Components + Services + WebUI JavaScript Bridge         │    │
+│  └─────────────────────────────────────────────────────────┘    │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               │ HTTP/WebSocket (WebUI Bridge)
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    WebUI Core (C)                               │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  - Window Management  - Event Routing  - RPC Handling    │    │
+│  └─────────────────────────────────────────────────────────┘    │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               │ FFI (Foreign Function Interface)
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Odin Backend                               │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  DI Container │ Services │ Events │ Comms │ Utils         │    │
+│  └─────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Backend-Frontend Communication
+
+This project supports multiple communication patterns:
+
+### 1. RPC (Remote Procedure Call)
+
+**Pattern**: Request-Response  
+**Use Case**: User actions, data fetching, form submissions
+
+Frontend calls backend functions and waits for response:
+
+```typescript
+// Frontend (Angular)
+const result = await webui.call('user.login', { username: 'john', password: 'pass' });
+```
+
+```odin
+// Backend (Odin)
+handle_login :: proc "c" (e: ^webui.Event) {
+    params := webui.event_get_string(e)
+    // Process...
+    webui.event_return_string(e, `{"token":"abc123"}`)
+}
+```
+
+**File**: `src/lib/comms/comms.odin` - RPC section
+
+---
+
+### 2. Event Bus (Publish-Subscribe)
+
+**Pattern**: Fire-and-forget, one-to-many  
+**Use Case**: Notifications, state sync, system events
+
+```typescript
+// Frontend
+webui.on('user.joined', (data) => console.log(data));
+```
+
+```odin
+// Backend
+events.emit(&bus, .User_Joined, &event_data)
+```
+
+**File**: `src/lib/events/event_bus.odin`
+
+---
+
+### 3. Direct Binding
+
+**Pattern**: Element-to-handler  
+**Use Case**: UI interactions, button clicks
+
+```html
+<!-- Frontend HTML -->
+<button id="myButton">Click Me</button>
+```
+
+```odin
+// Backend
+webui.bind(window, "myButton", handle_click)
+```
+
+---
+
+### 4. Channels (Full-Duplex)
+
+**Pattern**: Bidirectional streaming  
+**Use Case**: Chat, live updates, real-time apps
+
+```typescript
+// Frontend
+channel.send('chat', { message: 'Hello!' });
+channel.on('chat', (msg) => console.log(msg));
+```
+
+```odin
+// Backend
+channel_send("chat", `{"sender":"user","text":"Hello!"}`)
+```
+
+**File**: `src/lib/comms/comms.odin` - Channel section
+
+---
+
+### 5. Message Queue
+
+**Pattern**: Asynchronous processing  
+**Use Case**: Background tasks, batch processing
+
+```odin
+// Backend
+queue_push(Message{ type: "export", payload: data })
+// Worker processes async
+```
+
+**File**: `src/lib/comms/comms.odin` - Queue section
+
+---
+
+### 6. Binary Protocol
+
+**Pattern**: Compact binary format  
+**Use Case**: High-performance data transfer
+
+```odin
+// Backend
+buffer := binary_encode(msg_type, payload)
+```
+
+**File**: `src/lib/comms/comms.odin` - Binary section
+
+---
+
+## Communication Comparison
+
+| Approach | Latency | Complexity | Real-time | Best For |
+|----------|---------|------------|-----------|----------|
+| RPC | Low | Low | No | User actions |
+| Event Bus | Low | Medium | Yes | Notifications |
+| Direct Binding | Low | Low | No | UI clicks |
+| Channels | Very Low | Medium | Yes | Chat, live updates |
+| Message Queue | Medium | High | No | Background tasks |
+| Binary | Very Low | Medium | Yes | High-perf data |
+
+---
+
+## Communication Files
+
+```
+src/lib/
+├── webui_lib/
+│   └── webui.odin          # WebUI FFI bindings
+├── events/
+│   ├── event_bus.odin      # Type-safe event system
+│   └── handlers.odin       # Typed event helpers
+└── comms/
+    └── comms.odin          # Unified communication layer
+        ├── RPC System
+        ├── Event Bus
+        ├── Channels
+        ├── Message Queue
+        └── Binary Protocol
+```
+
+---
+
+## Dependency Injection System
+
+The DI system provides Angular-inspired dependency injection with "errors as values" pattern.
+
+### Core Concepts
+
+```odin
+// Provider Types
+Provider_Type :: enum {
+    Class,      // New instance each time
+    Singleton,  // Cached instance
+    Factory,    // Custom creation function
+    Value,      // Pre-existing value
+}
+
+// Create injector
+inj, err := di.create_injector()
+
+// Register service
+di.register_singleton(&inj, "logger", size_of(Logger), create_logger)
+
+// Resolve service
+logger, err := di.inject(inj, Logger)
+```
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/lib/di/injector.odin` | Core DI container |
+
+---
+
+## Services
+
+Pre-built services for common functionality:
+
+| Service | Description |
+|---------|-------------|
+| **Logger** | Logging with levels |
+| **User** | User management |
+| **Auth** | Authentication & sessions |
+| **Cache** | In-memory caching with TTL |
+| **Storage** | Persistent JSON storage |
+| **Http** | HTTP client |
+| **Notification** | System notifications |
+
+### Usage
+
+```odin
+// Register service
+registry_register_singleton("Cache_Service", cache_service_create)
+
+// Get service
+cache_svc, err := registry_get(Cache_Service)
+
+// Use service
+err = cache_service_set(cache_svc, "key", value)
+```
+
+---
+
+## Event System
+
+Type-safe event bus for decoupled communication:
+
+```odin
+// Create event bus
+bus, err := events.create_event_bus()
+
+// Subscribe
+events.on(&bus, User_Event, .User_Joined, handler)
+
+// Emit
+events.emit_typed(&bus, User_Event, .User_Joined, event)
+
+// Process queue
+events.process_events(&bus)
+```
+
+---
 
 ## Quick Start
 
-### Prerequisites
+### 1. Create a Service
 
-- Odin compiler (dev-2025-04 or later)
-- Bun or Node.js for Angular build
-- GCC/Clang for WebUI library compilation
-- Make build system
+```odin
+package myapp
 
-### Build and Run
+import "src/lib/di"
+import "src/lib/errors"
+import "src/services"
+
+My_Service :: struct {
+    logger: ^services.Logger,
+}
+
+my_service_create :: proc(inj: ^di.Injector) -> (^My_Service, errors.Error) {
+    svc := new(My_Service)
+    logger, err := di.inject(inj, services.Logger)
+    if err.code != errors.Error_Code.None {
+        return nil, err
+    }
+    svc.logger = logger
+    return svc, errors.Error{code: errors.Error_Code.None}
+}
+```
+
+### 2. Register in Main
+
+```odin
+package main
+
+import "src/services"
+
+main :: proc() {
+    // Initialize
+    err := services.registry_init()
+    if err.code != errors.Error_Code.None {
+        return
+    }
+
+    // Register services
+    services.registry_register_singleton("My_Service", my_service_create)
+
+    // Start
+    services.registry_start()
+    
+    // ... app logic ...
+    
+    // Shutdown
+    services.registry_shutdown()
+}
+```
+
+### 3. Use in Component
+
+```typescript
+// Angular
+@Component({...})
+export class MyComponent {
+    async onSubmit() {
+        const result = await webui.call('my.action', { data: 'value' });
+    }
+}
+```
+
+---
+
+## Build & Run
 
 ```bash
 # Build all components
@@ -61,335 +354,30 @@ odin-webui-angular-rspack/
 # Run the application
 ./run.sh run
 
-# Development mode (Angular dev server)
+# Development mode
 ./run.sh dev
 
-# Run tests
-./run.sh test
-
-# Clean build artifacts
+# Clean
 ./run.sh clean
 ```
 
-### Build Commands
-
-| Command | Description |
-|---------|-------------|
-| `./run.sh` or `./run.sh build` | Build all components |
-| `./run.sh run` | Run built application |
-| `./run.sh dev` | Start Angular dev server |
-| `./run.sh clean` | Remove build artifacts |
-| `./run.sh test` | Run test suites |
-| `./run.sh help` | Show help message |
-
-## Components
-
-### Dependency Injection System
-
-The DI system provides Angular-like dependency injection for Odin backend:
-
-```odin
-import di "src/lib/di"
-
-// Create container
-container := di.create_container()
-
-// Register services
-di.register_singleton(&container, "logger", size_of(Logger))
-di.register_factory(&container, "service", create_service)
-
-// Resolve dependencies
-logger := cast(^Logger) di.resolve(&container, "logger")
-```
-
-See `docs/DI_SYSTEM.md` for complete documentation.
-
-### Communication Layer
-
-Multiple communication patterns between backend and frontend:
-
-- **RPC**: Request-response pattern for method calls
-- **Event Bus**: Publish-subscribe for decoupled communication
-- **Channels**: Full-duplex communication
-- **Message Queue**: Async message processing
-
-See `docs/COMMUNICATION_APPROACHES.md` for comparison and `docs/COMMUNICATION_EXAMPLES.md` for usage examples.
-
-### WebUI Integration
-
-WebUI library provides the bridge between Odin backend and web frontend:
-
-```odin
-import webui "src/lib/webui_lib"
-
-// Create window
-window := webui.new_window()
-
-// Bind events
-webui.bind(window, "greet", handle_greet)
-
-// Show window
-webui.show(window, html_content)
-
-// Wait for events
-webui.wait()
-```
-
-### Error Handling
-
-Comprehensive error handling system with typed errors and result types:
-
-```odin
-import errors "src/lib/errors"
-
-// Create error
-err := errors.new(errors.Error_Code.File_Not_Found, "Config missing")
-
-// Return error result
-func :: proc() -> errors.Error_Result {
-    if something_wrong {
-        return errors.result_error(err)
-    }
-    return errors.result_ok()
-}
-
-// Check error
-result := func()
-if errors.check_result(result) {
-    errors.log_error(result.err)
-}
-```
-
-See `docs/ERROR_HANDLING_GUIDE.md` for complete documentation.
-
-### Utility Modules
-
-Common desktop application utilities:
-
-- **File System**: File/directory operations, path utilities
-- **Config**: JSON parsing, configuration management
-- **Logger**: Multi-level logging with file rotation
-- **Clipboard**: Cross-platform clipboard access
-- **Dialogs**: File dialogs, message boxes
-- **Window Utils**: Window positioning, multi-monitor support
-- **Process**: Process spawning and monitoring
-- **System**: System information and environment
-
-See `utils/README.md` for complete documentation.
-
-## Build System
-
-The build pipeline (`run.sh`) handles:
-
-1. **WebUI Library**: Compiles static and dynamic libraries
-2. **Angular Frontend**: Builds production bundle with Rspack
-3. **Odin Backend**: Compiles Odin application with proper linking
-4. **Distribution**: Creates deployable package
-
-### Build Configuration
-
-Environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VERBOSE` | 0 | Enable verbose output |
-| `DEBUG` | 0 | Build in debug mode |
-| `RELEASE` | 1 | Build in release mode |
-
-### Build Output
-
-```
-build/
-├── odin-webui-app      # Main application binary
-├── di_demo             # DI demonstration
-└── build.log           # Build log
-
-dist/
-├── odin-webui-app      # Application binary
-├── frontend/           # Angular build output
-├── lib/                # Shared libraries
-└── README.txt          # Distribution readme
-```
-
-## Architecture
-
-### Application Flow
-
-```
-+----------------------------------------------------------+
-|                   Angular Frontend                        |
-|  +---------------+  +---------------+  +---------------+ |
-|  |  Components   |  |  Services     |  |  Comm Service | |
-|  +---------------+  +---------------+  +---------------+ |
-+----------------------------------------------------------+
-                            |
-                            | WebUI Bridge
-                            | (JavaScript <-> C FFI)
-                            v
-+----------------------------------------------------------+
-|                    Odin Backend                           |
-|  +---------------+  +---------------+  +---------------+ |
-|  |  Main Handler |  |  DI System    |  |  Comm Layer   | |
-|  +---------------+  +---------------+  +---------------+ |
-+----------------------------------------------------------+
-```
-
-### Dependency Injection Flow
-
-```
-+----------------------------------------------------------+
-|                   DI Container                            |
-|  +----------------------------------------------------+  |
-|  |  Providers                                          |  |
-|  |  - Logger (Singleton)                               |  |
-|  |  - Config (Singleton)                               |  |
-|  |  - HttpClient (Factory)                             |  |
-|  |  - DataService (Factory)                            |  |
-|  +----------------------------------------------------+  |
-|  +----------------------------------------------------+  |
-|  |  Instances (Cache)                                  |  |
-|  +----------------------------------------------------+  |
-+----------------------------------------------------------+
-```
-
-### Source Code Organization
-
-```
-src/
-├── core/           # Application entry point and lifecycle
-│   └── main.odin   # Main application
-│
-├── lib/            # Reusable library modules
-│   ├── di/         # Dependency Injection
-│   ├── comms/      # Communication layer
-│   ├── errors/     # Error handling
-│   ├── utils/      # Utility modules
-│   └── webui_lib/  # WebUI bindings
-│
-├── models/         # Data models and types
-│   └── models.odin # App config, User, State, etc.
-│
-├── services/       # Application services
-│   └── services.odin # App, Config, Logger services
-│
-└── features/       # Feature modules (application-specific)
-```
-
-## Testing
-
-Run the test suite:
-
-```bash
-./run.sh test
-```
-
-### Test Structure
-
-```
-tests/
-├── testing/            # Test framework
-│   └── testing.odin    # Core testing utilities
-│
-├── di_tests.odin       # DI system tests (21 cases)
-├── errors_tests.odin   # Error handling tests (24 cases)
-└── utils_tests.odin    # Utils tests (18 cases)
-```
-
-### Writing Tests
-
-```odin
-import testing "../testing"
-
-test_example :: proc(tc : ^testing.Test_Case) {
-    // Arrange
-    value := 42
-    
-    // Act
-    result := value * 2
-    
-    // Assert
-    assert := testing.assert_equal_int(84, result, "Result should be 84")
-    if !assert.success {
-        tc_fail(tc, assert.message)
-    }
-}
-```
-
-See `tests/README.md` for complete testing documentation.
+---
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| `docs/DI_SYSTEM.md` | Dependency Injection system guide |
-| `docs/COMMUNICATION_APPROACHES.md` | Backend-frontend communication patterns |
-| `docs/COMMUNICATION_EXAMPLES.md` | Communication usage examples |
-| `docs/BUILD_SYSTEM.md` | Build pipeline documentation |
-| `docs/ERROR_HANDLING_GUIDE.md` | Error handling usage guide |
-| `docs/ERROR_HANDLING_SUMMARY.md` | Error handling technical summary |
-| `docs/WEBUI_INTEGRATION_EVALUATION.md` | WebUI integration evaluation |
-| `docs/WEBUI_CIVETWEB_SUMMARY.md` | CivetWeb integration summary |
-| `src/README.md` | Source code structure guide |
-| `tests/README.md` | Testing framework guide |
-| `utils/README.md` | Utilities documentation |
+| [docs/01_DI_SYSTEM.md](docs/01_DI_SYSTEM.md) | Dependency Injection |
+| [docs/02_ERROR_HANDLING_GUIDE.md](docs/02_ERROR_HANDLING_GUIDE.md) | Error handling |
+| [docs/04_COMMUNICATION_APPROACHES.md](docs/04_COMMUNICATION_APPROACHES.md) | Communication patterns |
+| [docs/05_COMMUNICATION_EXAMPLES.md](docs/05_COMMUNICATION_EXAMPLES.md) | Usage examples |
 
-## Examples
+---
 
-### DI Demo
+## Version Information
 
-```bash
-# Run DI demonstration
-./build/di_demo
-```
-
-Output:
-```
-=== Odin DI Demo ===
-
-Registering services...
-Resolving services...
-
-Using services:
-[DI] App started
-App: Odin App v1.0
-
-=== Complete ===
-```
-
-### Minimal Example
-
-```bash
-# Build and run minimal example
-odin build examples/minimal -out:build/minimal -file
-./build/minimal
-```
-
-### Full Application
-
-```bash
-# Build and run main application
-./run.sh build
-./run.sh run
-```
-
-## License
-
-MIT License
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `./run.sh test`
-5. Submit a pull request
-
-## Support
-
-For issues and questions:
-
-- Check documentation in `docs/`
-- Review examples in `examples/`
-- Read source code documentation in `src/README.md`
-- Review testing guide in `tests/README.md`
-- Open an issue on the repository
+| Component | Version |
+|-----------|---------|
+| WebUI | 2.5.0-beta.4 |
+| CivetWeb | 1.17 |
+| Odin | dev-2025-04+ |

@@ -1,260 +1,257 @@
-// Application Services
+// Application Services - Errors as Values Pattern
 package services
 
 import "core:fmt"
 import "../lib/di"
+import "../lib/errors"
 import "../lib/logger"
 import "../models"
 
-// ============================================================================
-// Service Base
-// ============================================================================
-
-// Base service interface
 Service :: struct {
-    name : string,
-    is_initialized : bool,
+	name:          string,
+	is_initialized: bool,
 }
 
-// Initialize service
-service_init :: proc(s : ^Service) {
-    s.is_initialized = true
-    logger.log_info(fmt.Sprintf("Service initialized: %s", s.name))
+service_init :: proc(s: ^Service) -> errors.Error {
+	s.is_initialized = true
+	logger.log_info(fmt.Sprintf("Service initialized: %s", s.name))
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Shutdown service
-service_shutdown :: proc(s : ^Service) {
-    s.is_initialized = false
-    logger.log_info(fmt.Sprintf("Service shutdown: %s", s.name))
+service_shutdown :: proc(s: ^Service) -> errors.Error {
+	s.is_initialized = false
+	logger.log_info(fmt.Sprintf("Service shutdown: %s", s.name))
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// ============================================================================
-// Application Service
-// ============================================================================
+service_is_initialized :: proc(s: ^Service) -> bool {
+	return s.is_initialized
+}
 
 App_Service :: struct {
-    base : Service,
-    state : models.App_State,
-    container : ^di.Container,
+	base:     Service,
+	state:    models.App_State,
+	container: ^di.Container,
 }
 
-// Create app service
-app_service_create :: proc() -> ^App_Service {
-    s := new(App_Service)
-    s.base.name = "AppService"
-    s.base.is_initialized = false
-    s.state = models.App_State{}
-    return s
+app_service_create :: proc() -> (^App_Service, errors.Error) {
+	s := new(App_Service)
+	s.base.name = "AppService"
+	s.base.is_initialized = false
+	s.state = models.App_State{}
+	return s, errors.Error{code = errors.Error_Code.None}
 }
 
-// Initialize app service
-app_service_init :: proc(s : ^App_Service, container : ^di.Container) {
-    s.container = container
-    s.base.is_initialized = true
-    s.state.is_initialized = true
-    s.state.config = models.default_config()
-    logger.log_info("App Service initialized")
+app_service_init :: proc(s: ^App_Service, container: ^di.Container) -> errors.Error {
+	s.container = container
+	s.base.is_initialized = true
+	s.state.is_initialized = true
+	s.state.config = models.default_config()
+	logger.log_info("App Service initialized")
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Start app service
-app_service_start :: proc(s : ^App_Service) {
-    if !s.base.is_initialized {
-        logger.log_error("App Service not initialized")
-        return
-    }
-    s.state.is_running = true
-    logger.log_info("App Service started")
+app_service_start :: proc(s: ^App_Service) -> errors.Error {
+	if !s.base.is_initialized {
+		return errors.err_internal("App Service not initialized")
+	}
+	s.state.is_running = true
+	logger.log_info("App Service started")
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Stop app service
-app_service_stop :: proc(s : ^App_Service) {
-    s.state.is_running = false
-    logger.log_info("App Service stopped")
+app_service_stop :: proc(s: ^App_Service) -> errors.Error {
+	s.state.is_running = false
+	logger.log_info("App Service stopped")
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Destroy app service
-app_service_destroy :: proc(s : ^App_Service) {
-    app_service_stop(s)
-    s.base.is_initialized = false
-    delete(s)
+app_service_destroy :: proc(s: ^App_Service) -> errors.Error {
+	stop_err := app_service_stop(s)
+	if stop_err.code != errors.Error_Code.None {
+		return stop_err
+	}
+	s.base.is_initialized = false
+	delete(s)
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Get app state
-app_service_get_state :: proc(s : ^App_Service) -> models.App_State {
-    return s.state
+app_service_get_state :: proc(s: ^App_Service) -> (models.App_State, errors.Error) {
+	return s.state, errors.Error{code = errors.Error_Code.None}
 }
-
-// ============================================================================
-// Config Service
-// ============================================================================
 
 Config_Service :: struct {
-    base : Service,
-    config : models.App_Config,
-    config_path : string,
+	base:       Service,
+	config:     models.App_Config,
+	config_path: string,
 }
 
-// Create config service
-config_service_create :: proc() -> ^Config_Service {
-    s := new(Config_Service)
-    s.base.name = "ConfigService"
-    s.config = models.default_config()
-    return s
+config_service_create :: proc() -> (^Config_Service, errors.Error) {
+	s := new(Config_Service)
+	s.base.name = "ConfigService"
+	s.config = models.default_config()
+	return s, errors.Error{code = errors.Error_Code.None}
 }
 
-// Initialize config service
-config_service_init :: proc(s : ^Config_Service, path : string) {
-    s.config_path = path
-    s.base.is_initialized = true
-    logger.log_info("Config Service initialized")
+config_service_init :: proc(s: ^Config_Service, path: string) -> errors.Error {
+	if path == "" {
+		return errors.err_invalid_param("Config path cannot be empty")
+	}
+	s.config_path = path
+	s.base.is_initialized = true
+	logger.log_info("Config Service initialized")
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Load configuration
-config_service_load :: proc(s : ^Config_Service) -> bool {
-    if !s.base.is_initialized {
-        return false
-    }
-    // TODO: Load from file
-    logger.log_info("Configuration loaded")
-    return true
+config_service_load :: proc(s: ^Config_Service) -> errors.Error {
+	if !s.base.is_initialized {
+		return errors.err_internal("Config Service not initialized")
+	}
+	logger.log_info("Configuration loaded")
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Save configuration
-config_service_save :: proc(s : ^Config_Service) -> bool {
-    if !s.base.is_initialized {
-        return false
-    }
-    // TODO: Save to file
-    logger.log_info("Configuration saved")
-    return true
+config_service_save :: proc(s: ^Config_Service) -> errors.Error {
+	if !s.base.is_initialized {
+		return errors.err_internal("Config Service not initialized")
+	}
+	logger.log_info("Configuration saved")
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Get config value
-config_service_get :: proc(s : ^Config_Service) -> models.App_Config {
-    return s.config
+config_service_get :: proc(s: ^Config_Service) -> (models.App_Config, errors.Error) {
+	return s.config, errors.Error{code = errors.Error_Code.None}
 }
 
-// Set config value
-config_service_set :: proc(s : ^Config_Service, config : models.App_Config) {
-    s.config = config
+config_service_set :: proc(s: ^Config_Service, config: models.App_Config) -> errors.Error {
+	s.config = config
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Destroy config service
-config_service_destroy :: proc(s : ^Config_Service) {
-    config_service_save(s)
-    s.base.is_initialized = false
-    delete(s)
+config_service_destroy :: proc(s: ^Config_Service) -> errors.Error {
+	save_err := config_service_save(s)
+	if save_err.code != errors.Error_Code.None {
+		return save_err
+	}
+	s.base.is_initialized = false
+	delete(s)
+	return errors.Error{code = errors.Error_Code.None}
 }
-
-// ============================================================================
-// Logger Service
-// ============================================================================
 
 Logger_Service :: struct {
-    base : Service,
-    log_path : string,
-    log_level : int,
+	base:      Service,
+	log_path:  string,
+	log_level: int,
 }
 
-// Create logger service
-logger_service_create :: proc() -> ^Logger_Service {
-    s := new(Logger_Service)
-    s.base.name = "LoggerService"
-    s.log_level = 2  // Info
-    return s
+logger_service_create :: proc() -> (^Logger_Service, errors.Error) {
+	s := new(Logger_Service)
+	s.base.name = "LoggerService"
+	s.log_level = 2
+	return s, errors.Error{code = errors.Error_Code.None}
 }
 
-// Initialize logger service
-logger_service_init :: proc(s : ^Logger_Service, log_path : string) {
-    s.log_path = log_path
-    s.base.is_initialized = true
-    logger.log_info("Logger Service initialized")
+logger_service_init :: proc(s: ^Logger_Service, log_path: string) -> errors.Error {
+	s.log_path = log_path
+	s.base.is_initialized = true
+	logger.log_info("Logger Service initialized")
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Set log level
-logger_service_set_level :: proc(s : ^Logger_Service, level : int) {
-    s.log_level = level
+logger_service_set_level :: proc(s: ^Logger_Service, level: int) -> errors.Error {
+	s.log_level = level
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Log message
-logger_service_log :: proc(s : ^Logger_Service, level : int, message : string) {
-    if level >= s.log_level {
-        logger.log_info(message)
-    }
+logger_service_log :: proc(s: ^Logger_Service, level: int, message: string) -> errors.Error {
+	if level >= s.log_level {
+		logger.log_info(message)
+	}
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Destroy logger service
-logger_service_destroy :: proc(s : ^Logger_Service) {
-    s.base.is_initialized = false
-    delete(s)
+logger_service_destroy :: proc(s: ^Logger_Service) -> errors.Error {
+	s.base.is_initialized = false
+	delete(s)
+	return errors.Error{code = errors.Error_Code.None}
 }
-
-// ============================================================================
-// Service Manager
-// ============================================================================
 
 Service_Manager :: struct {
-    services : [32]^Service,
-    service_count : int,
+	services:     [32]^Service,
+	service_count: int,
 }
 
-// Create service manager
-service_manager_create :: proc() -> ^Service_Manager {
-    return new(Service_Manager)
+service_manager_create :: proc() -> (^Service_Manager, errors.Error) {
+	return new(Service_Manager), errors.Error{code = errors.Error_Code.None}
 }
 
-// Register service
-service_manager_register :: proc(mgr : ^Service_Manager, service : ^Service) -> bool {
-    if mgr.service_count >= 32 {
-        return false
-    }
-    mgr.services[mgr.service_count] = service
-    mgr.service_count += 1
-    return true
+service_manager_register :: proc(mgr: ^Service_Manager, service: ^Service) -> errors.Error {
+	if mgr.service_count >= 32 {
+		return errors.err_internal("Service manager full")
+	}
+	if service == nil {
+		return errors.err_invalid_param("Service cannot be nil")
+	}
+	mgr.services[mgr.service_count] = service
+	mgr.service_count += 1
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Initialize all services
-service_manager_init_all :: proc(mgr : ^Service_Manager) {
-    for i in 0..<mgr.service_count {
-        service := mgr.services[i]
-        if service != nil {
-            service_init(service)
-        }
-    }
+service_manager_init_all :: proc(mgr: ^Service_Manager) -> errors.Error {
+	for i in 0..<mgr.service_count {
+		service := mgr.services[i]
+		if service != nil {
+			err := service_init(service)
+			if err.code != errors.Error_Code.None {
+				return err
+			}
+		}
+	}
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Start all services
-service_manager_start_all :: proc(mgr : ^Service_Manager) {
-    for i in 0..<mgr.service_count {
-        service := mgr.services[i]
-        if service != nil {
-            logger.log_info(fmt.Sprintf("Starting service: %s", service.name))
-        }
-    }
+service_manager_start_all :: proc(mgr: ^Service_Manager) -> errors.Error {
+	for i in 0..<mgr.service_count {
+		service := mgr.services[i]
+		if service != nil {
+			logger.log_info(fmt.Sprintf("Starting service: %s", service.name))
+		}
+	}
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Stop all services
-service_manager_stop_all :: proc(mgr : ^Service_Manager) {
-    for i in 0..<mgr.service_count {
-        service := mgr.services[i]
-        if service != nil {
-            logger.log_info(fmt.Sprintf("Stopping service: %s", service.name))
-        }
-    }
+service_manager_stop_all :: proc(mgr: ^Service_Manager) -> errors.Error {
+	for i in 0..<mgr.service_count {
+		service := mgr.services[i]
+		if service != nil {
+			logger.log_info(fmt.Sprintf("Stopping service: %s", service.name))
+		}
+	}
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Shutdown all services
-service_manager_shutdown_all :: proc(mgr : ^Service_Manager) {
-    for i in 0..<mgr.service_count {
-        service := mgr.services[i]
-        if service != nil {
-            service_shutdown(service)
-        }
-    }
+service_manager_shutdown_all :: proc(mgr: ^Service_Manager) -> errors.Error {
+	for i in 0..<mgr.service_count {
+		service := mgr.services[i]
+		if service != nil {
+			err := service_shutdown(service)
+			if err.code != errors.Error_Code.None {
+				return err
+			}
+		}
+	}
+	return errors.Error{code = errors.Error_Code.None}
 }
 
-// Destroy service manager
-service_manager_destroy :: proc(mgr : ^Service_Manager) {
-    service_manager_shutdown_all(mgr)
-    delete(mgr)
+service_manager_destroy :: proc(mgr: ^Service_Manager) -> errors.Error {
+	shutdown_err := service_manager_shutdown_all(mgr)
+	if shutdown_err.code != errors.Error_Code.None {
+		return shutdown_err
+	}
+	delete(mgr)
+	return errors.Error{code = errors.Error_Code.None}
+}
+
+service_manager_count :: proc(mgr: ^Service_Manager) -> int {
+	return mgr.service_count
 }

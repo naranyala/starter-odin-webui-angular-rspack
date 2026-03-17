@@ -37,9 +37,7 @@ main :: proc() {
 	webui.set_root_folder(win, "frontend")
 	
 	// Navigate to index.html
-	result := webui.show(win, cstring("index.html"))
-	
-	fmt.println("webui.show result:", result)
+	webui.show(win, cstring("index.html"))
 	
 	fmt.println("Window open - Ctrl+C to exit")
 	webui.wait()
