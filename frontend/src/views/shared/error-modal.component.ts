@@ -427,11 +427,11 @@ export class ErrorModalComponent {
     }
   }
 
-  formatTimestamp(timestamp: string): string {
+  formatTimestamp(timestamp: number | string): string {
     try {
       return new Date(timestamp).toLocaleString();
     } catch {
-      return timestamp;
+      return String(timestamp);
     }
   }
 

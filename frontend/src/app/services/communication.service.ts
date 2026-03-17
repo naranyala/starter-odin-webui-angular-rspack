@@ -1,5 +1,6 @@
-// Angular Communication Services
-// Provides RPC, Event Bus, and Channel communication with Odin backend
+import { Injectable } from '@angular/core';
+import { Subject, Observable } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 // ============================================================================
 // RPC Client Service
@@ -312,7 +313,7 @@ export class MessageQueueService {
    */
   subscribe(type: string, handler: (message: Message) => void): Subscription {
     const subscription = this.messages$
-      .filter(msg => msg.type === type)
+      .pipe(filter(msg => msg.type === type))
       .subscribe(handler);
 
     return {
@@ -400,9 +401,18 @@ export class BinaryProtocolService {
    */
   send(msgType: number, payload: Uint8Array): void {
     const encoded = this.encode(msgType, payload);
-    // Convert to base64 for WebUI transfer
     const base64 = this.arrayBufferToBase64(encoded);
     (window as any).webui.sendBinary(base64);
+  }
+
+  private arrayBufferToBase64(buffer: Uint8Array): string {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
   }
 }
 

@@ -101,15 +101,15 @@ export interface UserStats {
             <form class="user-form" (ngSubmit)="createUser()">
               <div class="form-group">
                 <label class="form-label">Name</label>
-                <input type="text" class="form-input" [(ngModel)]="newUser.name" name="name" required />
+                <input type="text" class="form-input" [ngModel]="newUserForm.name" (ngModelChange)="updateNewUser('name', $event)" name="name" required />
               </div>
               <div class="form-group">
                 <label class="form-label">Email</label>
-                <input type="email" class="form-input" [(ngModel)]="newUser.email" name="email" required />
+                <input type="email" class="form-input" [ngModel]="newUserForm.email" (ngModelChange)="updateNewUser('email', $event)" name="email" required />
               </div>
               <div class="form-group">
                 <label class="form-label">Age</label>
-                <input type="number" class="form-input" [(ngModel)]="newUser.age" name="age" required min="1" max="150" />
+                <input type="number" class="form-input" [ngModel]="newUserForm.age" (ngModelChange)="updateNewUser('age', $event)" name="age" required min="1" max="150" />
               </div>
               <button type="submit" class="submit-button" [disabled]="isLoading()">
                 {{ isLoading() ? 'Creating...' : 'Create User' }}
@@ -172,6 +172,14 @@ export class SqliteCrudComponent {
   searchQuery = '';
 
   newUser = signal<Partial<User>>({ name: '', email: '', age: 25 });
+
+  get newUserForm() {
+    return this.newUser();
+  }
+
+  updateNewUser(field: keyof User, value: string | number) {
+    this.newUser.update(u => ({ ...u, [field]: value }));
+  }
 
   setActiveTab(tab: 'list' | 'create'): void {
     this.activeTab.set(tab);

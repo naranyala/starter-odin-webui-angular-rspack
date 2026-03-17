@@ -1,6 +1,6 @@
 // Core services - simplified
 export { ApiService } from './api.service';
-export { LoggerService, createLogger } from './logger.service';
+export { LoggerService } from './logger.service';
 export { StorageService } from './storage.service';
 export { HttpService } from './http.service';
 export { NotificationService } from './notification.service';

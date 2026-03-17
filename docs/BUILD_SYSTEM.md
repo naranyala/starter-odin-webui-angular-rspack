@@ -41,7 +41,7 @@ The main build script is `run.sh`, which provides a unified interface for all bu
 | `run` | Run the built application |
 | `dev` | Start development mode with Angular dev server |
 | `clean` | Remove all build artifacts |
-| `test` | Run tests |
+| `test` | Run test suites |
 | `help` | Show help message |
 
 ### Options
@@ -62,264 +62,288 @@ The main build script is `run.sh`, which provides a unified interface for all bu
 
 ## Build Process
 
-### Step 1: Check Requirements
+The build pipeline executes the following steps:
 
-The build script verifies all required tools are available:
+### 1. Requirements Check
 
-```bash
-[STEP] Checking Requirements
-[OK] Odin: odin version dev-2025-04
-[OK] GCC: gcc (GCC) 13.2.0
-[OK] Bun: v1.0.0
-[OK] Make: GNU Make 4.4
-```
+Verifies all required tools are installed:
 
-Required tools:
 - Odin compiler
-- GCC or Clang (for WebUI)
-- Bun or Node.js (for Angular)
+- GCC or Clang
+- Bun or Node.js
 - Make
 
-### Step 2: Build WebUI Library
+### 2. WebUI Library Build
+
+Compiles the WebUI library from source:
 
 ```bash
-[STEP] Building WebUI Library
-Build WebUI library (gcc  release static)...
-Build WebUI library (gcc  release dynamic)...
-Done.
-[OK] Static library: dist/libwebui-2-static.a
-[OK] Dynamic library: dist/libwebui-2.so
-[OK] WebUI library built successfully
+cd thirdparty/webui
+make clean
+make
 ```
 
 Output:
-- `thirdparty/webui/dist/libwebui-2-static.a` - Static library
-- `thirdparty/webui/dist/libwebui-2.so` - Dynamic library
+- `dist/libwebui-2-static.a` - Static library
+- `dist/libwebui-2.so` - Dynamic library (Linux)
 
-### Step 3: Build Angular Frontend
+### 3. Angular Frontend Build
+
+Builds the Angular application:
 
 ```bash
-[STEP] Building Angular Frontend
-Installing dependencies...
-Building Angular application...
-asset main.js 65.6 KiB [emitted]
-asset angular.js 448 KiB [emitted]
-[OK] Angular build output: frontend/dist/
-[OK] Angular frontend built successfully
+cd frontend
+bun install  # If node_modules missing
+bun run build:rspack
 ```
 
 Output:
-- `frontend/dist/` - Production build output
-- `frontend/dist/webui.js` - WebUI JavaScript bridge
+- `frontend/dist/` - Production bundle
 
-### Step 4: Build Odin Application
+### 4. Odin Backend Build
+
+Compiles the Odin application:
 
 ```bash
-[STEP] Building Odin Application
-Building main.odin...
-[OK] Built: build/odin-webui-app
-[OK] Odin application built successfully
+odin build src/core \
+    -out:build/odin-webui-app \
+    -extra-linker-flags:"-Lthirdparty/webui/dist -lwebui-2-static -lpthread -lm -ldl" \
+    -o:speed \
+    -no-bounds-check
 ```
 
 Output:
-- `build/odin-webui-app` - Main application binary
-- `build/build.log` - Build log
+- `build/odin-webui-app` - Application binary
+- `build/di_demo` - DI demonstration
 
-### Step 5: Create Distribution Package
+### 5. Distribution Package
 
-```bash
-[STEP] Creating Distribution Package
-[OK] Copied application binary
-[OK] Copied Angular frontend
-[OK] Copied webui.js
-[OK] Distribution package created: dist/
-```
-
-Output:
-- `dist/odin-webui-app` - Application binary
-- `dist/frontend/` - Angular build
-- `dist/lib/` - Shared libraries
-- `dist/webui.js` - WebUI JavaScript bridge
-
-## Build Output Structure
+Creates deployable package:
 
 ```
-build/
-├── odin-webui-app      # Main application binary
-├── di_demo             # DI demonstration
-└── build.log           # Build log
-
 dist/
 ├── odin-webui-app      # Application binary
 ├── frontend/           # Angular build output
-│   ├── index.html
-│   ├── main.js
-│   ├── angular.js
-│   └── ...
 ├── lib/                # Shared libraries
-│   └── libwebui-2.so
-├── webui.js            # WebUI JavaScript bridge
-└── README.txt          # Distribution readme
+└── README.txt          # Distribution info
 ```
 
 ## Build Configuration
 
-### Odin Build Flags
+### Debug Build
 
 ```bash
-# Release build (default)
-odin build . -out:app -o:speed -no-bounds-check
-
-# Debug build
-odin build . -out:app -debug -g
-
-# With custom linker flags
-odin build . -out:app \
-    -extra-linker-flags:"-L./thirdparty/webui/dist -lwebui-2-static -lpthread -lm -ldl"
+./run.sh build --debug
 ```
 
-### Angular Build Configuration
+Or set environment variable:
 
-```json
-// angular.json
-{
-  "build": {
-    "options": {
-      "outputPath": "dist",
-      "optimization": true,
-      "sourceMap": false,
-      "extractLicenses": false
-    }
-  }
+```bash
+DEBUG=1 ./run.sh build
+```
+
+### Release Build
+
+```bash
+./run.sh build --release
+```
+
+Or set environment variable:
+
+```bash
+RELEASE=1 ./run.sh build
+```
+
+### Verbose Output
+
+```bash
+./run.sh build --verbose
+```
+
+Or set environment variable:
+
+```bash
+VERBOSE=1 ./run.sh build
+```
+
+## Build Outputs
+
+### Development Build
+
+```
+build/
+├── odin-webui-app      # Main application (debug symbols)
+├── di_demo             # DI demonstration
+└── build.log           # Build log
+```
+
+### Distribution Package
+
+```
+dist/
+├── odin-webui-app      # Main application
+├── frontend/           # Angular production bundle
+│   ├── index.html
+│   ├── *.js
+│   └── *.css
+├── lib/
+│   └── libwebui-2.so   # Shared library (Linux)
+└── README.txt          # Distribution readme
+```
+
+## Customization
+
+### Modify Build Flags
+
+Edit `run.sh` to customize build flags:
+
+```bash
+# In build_odin() function
+local build_flags="-o:speed"  # Optimize for speed
+
+# For debug
+local build_flags="-debug -g"
+
+# For size optimization
+local build_flags="-o:size"
+```
+
+### Add Custom Build Steps
+
+Add custom steps in `run.sh`:
+
+```bash
+build_custom() {
+    print_header "Building Custom Component"
+    
+    # Your custom build logic
+    echo "Building custom component..."
+    
+    # Check for errors
+    if [ $? -ne 0 ]; then
+        print_error "Custom build failed"
+        return 1
+    fi
+    
+    print_step "Custom component built"
 }
 ```
 
-### WebUI Build Configuration
+### Cross-Platform Builds
+
+The build system supports multiple platforms:
+
+#### Linux
 
 ```bash
-# Build static library
-make static
-
-# Build dynamic library
-make dynamic
-
-# Clean
-make clean
+./run.sh build
 ```
 
-## Development Mode
-
-Development mode runs the Angular dev server with hot reload:
+#### macOS
 
 ```bash
-./run.sh dev
+# May need to adjust linker flags for macOS
+./run.sh build
 ```
 
-This starts:
-- Angular dev server on http://localhost:4200
-- File watching for changes
-- Hot module replacement
-
-## Cleaning Build Artifacts
+#### Windows
 
 ```bash
-./run.sh clean
+# Use WSL or adjust paths for native Windows
+./run.sh build
 ```
-
-Removes:
-- `build/` directory
-- `dist/` directory
-- `frontend/dist/` directory
-- `frontend/node_modules/` directory
-- WebUI build output
-- Odin cache
 
 ## Troubleshooting
 
 ### Odin Compiler Not Found
 
-```
-[ERROR] Odin compiler not found
-```
-
-Solution: Install Odin or add it to PATH:
 ```bash
+# Check Odin installation
+odin version
+
+# Add Odin to PATH
 export PATH=$PATH:/path/to/odin
 ```
 
 ### WebUI Build Fails
 
-```
-[ERROR] Failed to build WebUI library
-```
-
-Solution: Install build dependencies:
 ```bash
-# Ubuntu/Debian
+# Check GCC installation
+gcc --version
+
+# Install build essentials (Ubuntu/Debian)
 sudo apt-get install build-essential
 
-# Fedora
-sudo dnf install gcc make
+# Install Xcode command line tools (macOS)
+xcode-select --install
 ```
 
 ### Angular Build Fails
 
-```
-[ERROR] Angular build failed
-```
-
-Solution: Install dependencies:
 ```bash
+# Check Node.js/Bun installation
+node --version
+bun --version
+
+# Clear node_modules and reinstall
 cd frontend
+rm -rf node_modules
 bun install
-# or
-npm install
 ```
 
 ### Linker Errors
 
-```
-undefined reference to webui_new_window
-```
-
-Solution: Ensure WebUI library is built and linker flags are correct:
 ```bash
-# Rebuild WebUI
+# Check library paths
+ls -la thirdparty/webui/dist/
+
+# Rebuild WebUI library
 cd thirdparty/webui
 make clean
 make
-
-# Rebuild application
-./run.sh build
 ```
 
-## Custom Build Scripts
-
-### Build Only Odin
+### Runtime Errors
 
 ```bash
-#!/bin/bash
-odin build . \
-    -out:build/app \
-    -extra-linker-flags:"-L./thirdparty/webui/dist -lwebui-2-static -lpthread" \
-    -o:speed
+# Set library path (Linux)
+export LD_LIBRARY_PATH=thirdparty/webui/dist:$LD_LIBRARY_PATH
+
+# Run application
+./build/odin-webui-app
 ```
 
-### Build Only Angular
+## Performance Optimization
+
+### Build Time Optimization
+
+1. **Use incremental builds**: Only rebuild changed components
+2. **Enable caching**: Keep node_modules between builds
+3. **Parallel builds**: Use multiple CPU cores
 
 ```bash
-#!/bin/bash
-cd frontend
-bun run build:rspack
+# Parallel make jobs
+make -j$(nproc)
 ```
 
-### Build Only WebUI
+### Binary Size Optimization
 
 ```bash
-#!/bin/bash
-cd thirdparty/webui
-make clean
-make
+# Optimize for size
+odin build src/core -o:size -out:build/app
+
+# Strip symbols
+strip build/app
+```
+
+### Runtime Performance
+
+```bash
+# Optimize for speed
+odin build src/core -o:speed -out:build/app
+
+# Disable bounds checking (production only)
+odin build src/core -o:speed -no-bounds-check -out:build/app
 ```
 
 ## Continuous Integration
@@ -336,34 +360,116 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v2
     
     - name: Install Odin
       run: |
-        wget https://github.com/odin-lang/Odin/releases/download/dev-2025-04/odin-linux-amd64-dev-2025-04.tar.gz
-        tar -xzf odin-linux-amd64-dev-2025-04.tar.gz
-        echo "$PWD/odin" >> $GITHUB_PATH
+        # Install Odin compiler
     
-    - name: Install Bun
-      run: curl -fsSL https://bun.sh/install | bash
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
     
     - name: Build
       run: ./run.sh build
     
     - name: Test
       run: ./run.sh test
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: application
+        path: dist/
 ```
 
-## Performance Tips
+### GitLab CI Example
 
-1. **Use Release Mode**: `-o:speed` flag optimizes for speed
-2. **Disable Bounds Checking**: `-no-bounds-check` for production
-3. **Parallel Builds**: Build Angular and WebUI in parallel
-4. **Cache Dependencies**: Cache `node_modules` and WebUI build
+```yaml
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  script:
+    - ./run.sh build
+  artifacts:
+    paths:
+      - dist/
+
+test:
+  stage: test
+  script:
+    - ./run.sh test
+```
+
+## Build Metrics
+
+### Typical Build Times
+
+| Component | Time |
+|-----------|------|
+| WebUI Library | 5-10 seconds |
+| Angular Frontend | 10-30 seconds |
+| Odin Backend | 2-5 seconds |
+| **Total** | **20-45 seconds** |
+
+### Binary Sizes
+
+| Component | Size |
+|-----------|------|
+| Odin Backend | 300-500 KB |
+| Angular Frontend | 500 KB - 2 MB |
+| WebUI Library | 300 KB |
+| **Total** | **1-3 MB** |
+
+## Advanced Usage
+
+### Partial Builds
+
+Build specific components:
+
+```bash
+# Build only WebUI
+cd thirdparty/webui && make
+
+# Build only Angular
+cd frontend && bun run build:rspack
+
+# Build only Odin
+odin build src/core -out:build/app
+```
+
+### Custom Distribution
+
+Create custom distribution package:
+
+```bash
+./run.sh build
+
+# Create custom package
+mkdir -p custom_dist
+cp build/odin-webui-app custom_dist/
+cp -r frontend/dist custom_dist/web
+cp thirdparty/webui/dist/*.so custom_dist/lib/
+```
+
+### Build with Custom Flags
+
+```bash
+# Custom Odin flags
+odin build src/core \
+    -out:build/app \
+    -extra-linker-flags:"custom-flags" \
+    -define:CUSTOM_FLAG \
+    -debug
+```
 
 ## See Also
 
-- `run.sh` - Main build script
-- `build.sh` - Legacy build script
-- `frontend/angular.json` - Angular configuration
-- `thirdparty/webui/Makefile` - WebUI build configuration
+- `README.md` - Project overview
+- `docs/DI_SYSTEM.md` - Dependency injection
+- `docs/COMMUNICATION_APPROACHES.md` - Communication patterns
+- `src/README.md` - Source code structure

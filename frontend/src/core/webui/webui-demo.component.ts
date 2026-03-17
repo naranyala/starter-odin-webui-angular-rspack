@@ -6,12 +6,13 @@
 
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { WebUIService } from './webui.service';
 
 @Component({
   selector: 'app-webui-demo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="webui-demo">
       <h2>🦉 Odin Backend Integration</h2>
