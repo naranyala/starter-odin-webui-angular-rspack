@@ -42,6 +42,7 @@ foreign webui_lib {
 	
 	webui_set_size     :: proc(win : c.size_t, width : c.int, height : c.int) ---
 	webui_set_resizable :: proc(win : c.size_t, resizable : bool) ---
+	webui_maximize     :: proc(win : c.size_t) ---
 	
 	webui_bind         :: proc(win : c.size_t, element : cstring, callback : Event_Callback) -> bool ---
 	webui_unbind       :: proc(win : c.size_t, element : cstring) -> bool ---
@@ -107,4 +108,8 @@ get_string :: proc(e : ^Event) -> cstring {
 
 set_root_folder :: proc(win : Window, path : cstring) {
 	webui_set_root_folder(c.size_t(win), path)
+}
+
+maximize :: proc(win : Window) {
+	webui_maximize(c.size_t(win))
 }

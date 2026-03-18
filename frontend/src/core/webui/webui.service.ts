@@ -1,6 +1,6 @@
 /**
  * WebUI Service for Angular
- * 
+ *
  * Provides bidirectional communication between Angular frontend
  * and Odin backend through WebUI library.
  */
@@ -27,7 +27,7 @@ export class WebUIService {
   private pendingRequests = new Map<number, {
     resolve: (value: any) => void;
     reject: (reason: any) => void;
-    timeout?: number;
+    timeout?: ReturnType<typeof setTimeout>;
   }>();
   private requestIdCounter = 0;
 

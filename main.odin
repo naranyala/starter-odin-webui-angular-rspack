@@ -31,13 +31,15 @@ main :: proc() {
 	
 	// Create window
 	win := webui.new_window()
-	webui.set_size(win, 1200, 800)
 	
 	// Set root folder for WebUI to serve static files
 	webui.set_root_folder(win, "frontend")
 	
 	// Navigate to index.html
 	webui.show(win, cstring("index.html"))
+	
+	// Maximize the window
+	webui.maximize(win)
 	
 	fmt.println("Window open - Ctrl+C to exit")
 	webui.wait()

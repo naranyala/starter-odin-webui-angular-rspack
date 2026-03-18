@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { WinBoxService, type WinBoxInstance } from '../core/winbox.service';
 import { LucideAngularModule } from 'lucide-angular';
+import { provideLucideIcons, Home, Lock, Database, Settings, Folder, Eye, Search, X, Rocket, Share2, Copy, Tag, Trash2, Menu, Grid, BarChart2, Globe, Info, Maximize2, Minimize2, FileText, Activity } from '../core/lucide-icons.provider';
 
 export interface NavItem {
   id: string;
@@ -29,29 +30,36 @@ export interface WindowEntry {
 }
 
 export type ViewMode = 'grid' | 'list';
-export type AppView = 'home' | 'auth' | 'sqlite' | 'devtools';
+export type AppView = 'home' | 'auth' | 'sqlite' | 'devtools' | 'settings' | 'help' | 'about';
+export type ThirdPanelView = 'details' | 'activity';
+
+export interface MenuGroup {
+  label: string;
+  items: NavItem[];
+}
 
 const TECH_CARDS: Card[] = [
-   { id: 1, title: 'Authentication', description: 'Login & Register', icon: 'lock', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', type: 'Feature', date: '2026-03-16' },
-   { id: 2, title: 'SQLite CRUD', description: 'Database Operations', icon: 'database', color: 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)', type: 'Feature', date: '2026-03-16' },
-   { id: 3, title: 'DevTools', description: 'Debugging Tools', icon: 'tool', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', type: 'Tool', date: '2026-03-15' },
-   { id: 4, title: 'System Info', description: 'System Monitoring', icon: 'bar-chart-2', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', type: 'Monitor', date: '2026-03-15' },
-   { id: 5, title: 'Network', description: 'Network Stats', icon: 'globe', color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', type: 'Monitor', date: '2026-03-14' },
-   { id: 6, title: 'Processes', description: 'Process Manager', icon: 'settings', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', type: 'Tool', date: '2026-03-14' },
+   { id: 1, title: 'Authentication', description: 'Login & Register', icon: 'Lock', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', type: 'Feature', date: '2026-03-16' },
+   { id: 2, title: 'SQLite CRUD', description: 'Database Operations', icon: 'Database', color: 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)', type: 'Feature', date: '2026-03-16' },
+   { id: 3, title: 'DevTools', description: 'Debugging Tools', icon: 'Settings', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', type: 'Tool', date: '2026-03-15' },
+   { id: 4, title: 'System Info', description: 'System Monitoring', icon: 'BarChart2', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', type: 'Monitor', date: '2026-03-15' },
+   { id: 5, title: 'Network', description: 'Network Stats', icon: 'Globe', color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', type: 'Monitor', date: '2026-03-14' },
+   { id: 6, title: 'Processes', description: 'Process Manager', icon: 'Settings', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', type: 'Tool', date: '2026-03-14' },
 ];
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, LucideAngularModule],
+  providers: [...provideLucideIcons()],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
 export class AppComponent {
   private readonly winboxService = inject(WinBoxService);
 
-  // Column size (percentage) for the left column
-  readonly leftColumnSize = signal(25); // Left column basis percentage
+  // Column size (percentage) for the left column (basis in flex: 0 0 leftColumnSize%)
+  readonly leftColumnSize = signal(25); // Default 25% for left column
 
   // Computed right column percentage (remaining space)
   readonly rightColumnSize = computed(() => 100 - this.leftColumnSize());
@@ -70,10 +78,113 @@ export class AppComponent {
   // Window management
   readonly windowEntries = signal<WindowEntry[]>([]);
 
-  // Breadcrumb navigation
-  readonly breadcrumbs = signal<{ label: string; icon: string }[]>([
-    { label: 'Home', icon: 'Home' },
+  // Menu counts
+  readonly mainMenuCount = signal(4);
+  readonly supportMenuCount = signal(3);
+
+  // Fuzzy search scoring function
+  private fuzzyScore(text: string, query: string): number {
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    
+    if (lowerText === lowerQuery) return 100;
+    if (lowerText.startsWith(lowerQuery)) return 80;
+    if (lowerText.includes(lowerQuery)) return 60;
+    
+    let score = 0;
+    let queryIndex = 0;
+    for (let i = 0; i < lowerText.length && queryIndex < lowerQuery.length; i++) {
+      if (lowerText[i] === lowerQuery[queryIndex]) {
+        score += 5;
+        queryIndex++;
+      }
+    }
+    return queryIndex === lowerQuery.length ? score : 0;
+  }
+
+  // Filtered menus based on search
+  readonly filteredMainMenus = computed<NavItem[]>(() => {
+    const query = this.searchQuery().trim();
+    if (!query) return this.mainMenus();
+    
+    return this.mainMenus()
+      .map(item => ({ item, score: this.fuzzyScore(item.label, query) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ item }) => item);
+  });
+
+  readonly filteredSupportMenus = computed<NavItem[]>(() => {
+    const query = this.searchQuery().trim();
+    if (!query) return this.supportMenus();
+    
+    return this.supportMenus()
+      .map(item => ({ item, score: this.fuzzyScore(item.label, query) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ item }) => item);
+  });
+
+  // Menu groups (original)
+  readonly mainMenus = computed<NavItem[]>(() => [
+    { id: 'home', label: 'Home', icon: 'Home' },
+    { id: 'auth', label: 'Auth', icon: 'Lock' },
+    { id: 'sqlite', label: 'SQLite', icon: 'Database' },
+    { id: 'devtools', label: 'DevTools', icon: 'Settings' },
   ]);
+
+  readonly supportMenus = computed<NavItem[]>(() => [
+    { id: 'settings', label: 'Settings', icon: 'Settings' },
+    { id: 'help', label: 'Help', icon: 'Info' },
+    { id: 'about', label: 'About', icon: 'Info' },
+  ]);
+
+  // Third panel state
+  readonly thirdPanelView = signal<ThirdPanelView>('details');
+
+  // Breadcrumb navigation
+  readonly breadcrumbs = signal<{ label: string; icon: any }[]>([
+    { label: 'Home', icon: Home },
+  ]);
+
+  // Lucide icons for direct use with [img] property
+  readonly icons: { [key: string]: any } = {
+    Home,
+    Lock,
+    Database,
+    Settings,
+    Folder,
+    Eye,
+    Search,
+    X,
+    Rocket,
+    Share2,
+    Copy,
+    Tag,
+    Trash2,
+    Menu,
+    Grid,
+    BarChart2,
+    Globe,
+    Info,
+    Maximize2,
+    Minimize2,
+    FileText,
+    Activity,
+  };
+
+  // Helper method to get icon by name
+  getIcon(name: string): any {
+    return this.icons[name] || this.icons.Home;
+  }
+
+  setActiveView(id: string): void {
+    this.activeView.set(id as AppView);
+  }
+
+  setThirdPanelView(view: ThirdPanelView): void {
+    this.thirdPanelView.set(view);
+  }
 
   private existingBoxes: WinBoxInstance[] = [];
   private authWindowId = 'auth-window-1';
@@ -245,29 +356,43 @@ export class AppComponent {
     this.selectedCard.set(null);
   }
 
-  // Resizing logic
-startResize(event: MouseEvent): void {
-     this.isResizing = true;
-     this.resizeStartX = event.clientX;
-     this.resizeStartSize = this.leftColumnSize();
-     document.body.style.cursor = 'ew-resize';
-     document.body.style.userSelect = 'none';
-     event.preventDefault();
-   }
+  showAppInfo(): void {
+    this.createWindow('app-info-window', 'App Info', 'generic', {
+      id: 0,
+      title: 'Application Info',
+      description: 'This is a two-column layout application.',
+      icon: 'Info',
+      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      type: 'App',
+      date: new Date().toISOString().split('T')[0],
+    });
+  }
 
-onMouseMove(event: MouseEvent): void {
-     if (!this.isResizing) return;
- 
-     const deltaX = event.clientX - this.resizeStartX;
-     const windowWidth = window.innerWidth;
-     const deltaPercent = (deltaX / windowWidth) * 100;
- 
-      if (this.activeSplitter === 'left') {
-        const newSize = Math.max(15, Math.min(85, this.resizeStartSize + deltaPercent));
-        this.leftColumnSize.set(newSize);
-        // rightColumnSize is computed from leftColumnSize, no need to set it
-      }
-   }
+  toggleColumnWidth(): void {
+    this.leftColumnSize.set(this.leftColumnSize() === 25 ? 75 : 25);
+  }
+
+  // Resizing logic
+  startResize(event: MouseEvent): void {
+    this.isResizing = true;
+    this.activeSplitter = 'left';
+    this.resizeStartX = event.clientX;
+    this.resizeStartSize = this.leftColumnSize();
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+    event.preventDefault();
+  }
+
+  onMouseMove(event: MouseEvent): void {
+    if (!this.isResizing || this.activeSplitter !== 'left') return;
+
+    const deltaX = event.clientX - this.resizeStartX;
+    const windowWidth = window.innerWidth;
+    const deltaPercent = (deltaX / windowWidth) * 100;
+
+    const newSize = Math.max(15, Math.min(85, this.resizeStartSize + deltaPercent));
+    this.leftColumnSize.set(newSize);
+  }
 
   onMouseUp(): void {
     this.isResizing = false;
