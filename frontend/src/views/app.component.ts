@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { WinBoxService, type WinBoxInstance } from '../core/winbox.service';
+import { LucideAngularModule } from 'lucide-angular';
 
 export interface NavItem {
   id: string;
@@ -31,31 +32,32 @@ export type ViewMode = 'grid' | 'list';
 export type AppView = 'home' | 'auth' | 'sqlite' | 'devtools';
 
 const TECH_CARDS: Card[] = [
-  { id: 1, title: 'Authentication', description: 'Login & Register', icon: '🔐', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', type: 'Feature', date: '2026-03-16' },
-  { id: 2, title: 'SQLite CRUD', description: 'Database Operations', icon: '🗄️', color: 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)', type: 'Feature', date: '2026-03-16' },
-  { id: 3, title: 'DevTools', description: 'Debugging Tools', icon: '🔧', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', type: 'Tool', date: '2026-03-15' },
-  { id: 4, title: 'System Info', description: 'System Monitoring', icon: '📊', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', type: 'Monitor', date: '2026-03-15' },
-  { id: 5, title: 'Network', description: 'Network Stats', icon: '🌐', color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', type: 'Monitor', date: '2026-03-14' },
-  { id: 6, title: 'Processes', description: 'Process Manager', icon: '⚙️', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', type: 'Tool', date: '2026-03-14' },
+   { id: 1, title: 'Authentication', description: 'Login & Register', icon: 'lock', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', type: 'Feature', date: '2026-03-16' },
+   { id: 2, title: 'SQLite CRUD', description: 'Database Operations', icon: 'database', color: 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)', type: 'Feature', date: '2026-03-16' },
+   { id: 3, title: 'DevTools', description: 'Debugging Tools', icon: 'tool', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', type: 'Tool', date: '2026-03-15' },
+   { id: 4, title: 'System Info', description: 'System Monitoring', icon: 'bar-chart-2', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', type: 'Monitor', date: '2026-03-15' },
+   { id: 5, title: 'Network', description: 'Network Stats', icon: 'globe', color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', type: 'Monitor', date: '2026-03-14' },
+   { id: 6, title: 'Processes', description: 'Process Manager', icon: 'settings', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', type: 'Tool', date: '2026-03-14' },
 ];
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
 export class AppComponent {
   private readonly winboxService = inject(WinBoxService);
 
-  // Column sizes (percentages, must sum to 100)
-  readonly leftColumnSize = signal(0); // Hidden
-  readonly middleColumnSize = signal(65); // Main content
-  readonly rightColumnSize = signal(35); // Preview
+  // Column size (percentage) for the left column
+  readonly leftColumnSize = signal(25); // Left column basis percentage
+
+  // Computed right column percentage (remaining space)
+  readonly rightColumnSize = computed(() => 100 - this.leftColumnSize());
 
   // Column collapsed state
-  readonly leftColumnCollapsed = signal(true); // Always collapsed
+  readonly leftColumnCollapsed = signal(false); // Visible by default
 
   // Navigation state
   readonly activeNavigation = signal<string>('favorites');
@@ -70,7 +72,7 @@ export class AppComponent {
 
   // Breadcrumb navigation
   readonly breadcrumbs = signal<{ label: string; icon: string }[]>([
-    { label: 'Home', icon: '🏠' },
+    { label: 'Home', icon: 'Home' },
   ]);
 
   private existingBoxes: WinBoxInstance[] = [];
@@ -79,7 +81,7 @@ export class AppComponent {
   private isResizing = false;
   private resizeStartX = 0;
   private resizeStartSize = 0;
-  private activeSplitter: 'left' | 'middle' | null = null;
+  private activeSplitter: 'left' | null = null;
 
   // Computed signals
   readonly navigationItems = computed(() => []);
@@ -244,44 +246,28 @@ export class AppComponent {
   }
 
   // Resizing logic
-  startResize(event: MouseEvent, splitter: 'left' | 'middle'): void {
-    this.isResizing = true;
-    this.resizeStartX = event.clientX;
+startResize(event: MouseEvent): void {
+     this.isResizing = true;
+     this.resizeStartX = event.clientX;
+     this.resizeStartSize = this.leftColumnSize();
+     document.body.style.cursor = 'ew-resize';
+     document.body.style.userSelect = 'none';
+     event.preventDefault();
+   }
 
-    if (splitter === 'left') {
-      this.activeSplitter = 'left';
-      this.resizeStartSize = this.leftColumnSize();
-    } else {
-      this.activeSplitter = 'middle';
-      this.resizeStartSize = this.middleColumnSize();
-    }
-
-    document.body.style.cursor = 'ew-resize';
-    document.body.style.userSelect = 'none';
-    event.preventDefault();
-  }
-
-  onMouseMove(event: MouseEvent): void {
-    if (!this.isResizing) return;
-
-    const deltaX = event.clientX - this.resizeStartX;
-    const windowWidth = window.innerWidth;
-    const deltaPercent = (deltaX / windowWidth) * 100;
-
-    if (this.activeSplitter === 'left') {
-      const newSize = Math.max(15, Math.min(30, this.resizeStartSize + deltaPercent));
-      this.leftColumnSize.set(newSize);
-      // Adjust middle column to compensate
-      const remaining = 100 - newSize - this.rightColumnSize();
-      this.middleColumnSize.set(Math.max(30, remaining));
-    } else if (this.activeSplitter === 'middle') {
-      const newSize = Math.max(30, Math.min(60, this.resizeStartSize + deltaPercent));
-      this.middleColumnSize.set(newSize);
-      // Adjust right column to compensate
-      const remaining = 100 - this.leftColumnSize() - newSize;
-      this.rightColumnSize.set(Math.max(20, remaining));
-    }
-  }
+onMouseMove(event: MouseEvent): void {
+     if (!this.isResizing) return;
+ 
+     const deltaX = event.clientX - this.resizeStartX;
+     const windowWidth = window.innerWidth;
+     const deltaPercent = (deltaX / windowWidth) * 100;
+ 
+      if (this.activeSplitter === 'left') {
+        const newSize = Math.max(15, Math.min(85, this.resizeStartSize + deltaPercent));
+        this.leftColumnSize.set(newSize);
+        // rightColumnSize is computed from leftColumnSize, no need to set it
+      }
+   }
 
   onMouseUp(): void {
     this.isResizing = false;
@@ -373,25 +359,25 @@ export class AppComponent {
           ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
           : 'linear-gradient(135deg, #00b09b 0%, #96c93d 100%)';
 
-      const box = new WinBoxConstructor({
-        id: windowId,
-        title: title,
-        background,
-        width: `${windowWidth}px`,
-        height: `${windowHeight}px`,
-        x: `${x}px`,
-        y: `${y}px`,
-        minwidth: 350,
-        minheight: type === 'auth' ? 450 : 400,
-        maxwidth: 800,
-        maxheight: 700,
-        html: this.getWindowHtml(type, card),
-        controls: {
-          minimize: true,
-          maximize: true,
-          close: true,
-        },
-      });
+       const box = new WinBoxConstructor({
+         id: windowId,
+         title: title,
+         background,
+         width: '100%',
+         height: '100%',
+         x: 0,
+         y: 0,
+         minwidth: 350,
+         minheight: type === 'auth' ? 450 : 400,
+         maxwidth: 800,
+         maxheight: 700,
+         html: this.getWindowHtml(type, card),
+         controls: {
+           minimize: true,
+           maximize: true,
+           close: true,
+         },
+       });
 
       if (!box) {
         return;

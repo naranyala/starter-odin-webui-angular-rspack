@@ -5,13 +5,13 @@
       <div class="toolbar__breadcrumb">
         @for (crumb of breadcrumbs(); track crumb.label; let last = $last) {
           @if (last) {
-            <span class="toolbar__breadcrumb__item active">
-              {{ crumb.icon }} {{ crumb.label }}
-            </span>
+<span class="toolbar__breadcrumb__item active">
+               <lucide-angular [name]="crumb.icon" size="16"></lucide-angular> {{ crumb.label }}
+             </span>
           } @else {
-            <span class="toolbar__breadcrumb__item">
-              {{ crumb.icon }} {{ crumb.label }}
-            </span>
+<span class="toolbar__breadcrumb__item">
+               <lucide-angular [name]="crumb.icon" size="16"></lucide-angular> {{ crumb.label }}
+             </span>
             <span class="toolbar__breadcrumb__separator">›</span>
           }
         }
@@ -19,9 +19,9 @@
     </div>
 
     <div class="toolbar__center">
-      <div class="toolbar__search">
-        <span class="toolbar__search__icon">🔍</span>
-        <input
+<div class="toolbar__search">
+         <lucide-angular name="Search" class="toolbar__search__icon" size="16"></lucide-angular>
+         <input
           type="text"
           class="toolbar__search__input"
           placeholder="Search applications..."
@@ -29,116 +29,88 @@
           (input)="onSearchChange($event)"
         />
         @if (searchQuery()) {
-          <button class="toolbar__search__clear" (click)="clearSearch()">✕</button>
+          <button type="button" class="toolbar__search__clear" (click)="clearSearch()">✕</button>
         }
       </div>
     </div>
 
-    <div class="toolbar__right">
-      <button class="toolbar__btn toolbar__btn--icon" (click)="closeAllWindows()" title="Close all windows">
-        <span class="toolbar__icon">✕</span>
-      </button>
-    </div>
+<div class="toolbar__right">
+       <button type="button" class="toolbar__btn toolbar__btn--icon" (click)="closeAllWindows()" title="Close all windows">
+         <lucide-angular name="X" class="toolbar__icon" size="16"></lucide-angular>
+       </button>
+     </div>
   </header>
 
-  <!-- MAIN CONTENT with Two Columns -->
-  <main class="main-container">
-    <!-- MIDDLE COLUMN - Content/List View with Fuzzy Search -->
-    <section class="column column--middle" [style.flex-basis]="middleColumnSize() + '%'">
-      <div class="column__header">
-        <div class="column__title">
-          <span class="column__icon">📱</span>
-          <span class="column__label">Applications</span>
-          @if (searchQuery()) {
-            <span class="column__split-indicator">{{ filteredCards().length }} results</span>
-          }
-        </div>
-        <div class="column__actions">
-          <button class="column__action-btn" (click)="toggleViewMode()" title="Toggle view">
-            {{ viewMode() === 'grid' ? '☰' : '▦' }}
-          </button>
-        </div>
-      </div>
-
-      <div class="column__content column__content--scrollable">
-        @if (viewMode() === 'grid') {
-          <div class="grid-view">
-            @for (card of filteredCards(); track card.id) {
-              <button class="grid-item" (click)="selectCard(card)" [class.selected]="selectedCard()?.id === card.id">
-                <div class="grid-item__icon" [style.background]="card.color">
-                  {{ card.icon }}
-                </div>
-                <span class="grid-item__label">{{ card.title }}</span>
-                <span class="grid-item__description">{{ card.description }}</span>
-                @if (card.score) {
-                  <span class="grid-item__score">{{ card.score }}</span>
-                }
-              </button>
-            }
-            @if (filteredCards().length === 0) {
-              <div class="empty-state">
-                <span class="empty-state__icon">🔍</span>
-                <span class="empty-state__text">No items found</span>
-                @if (searchQuery()) {
-                  <span class="empty-state__hint">Try a different search term</span>
-                }
-              </div>
-            }
+<!-- MAIN CONTENT with Two Columns -->
+  <main class="main-container" [style.display]="'flex'" [style.height]="'100%'">
+      <!-- LEFT COLUMN - Navigation -->
+      <section class="column column--left" [style.flex]="'0 0 ' + leftColumnSize() + '%'">
+        <div class="column__header">
+          <div class="column__title">
+            <lucide-angular name="Folder" class="column__icon" size="16"></lucide-angular>
+            <span class="column__label">Navigation</span>
           </div>
-        } @else {
-          <div class="list-view">
-            <div class="list-header">
-              <span class="list-header__item list-header__item--name">Name</span>
-              <span class="list-header__item list-header__item--type">Type</span>
-              <span class="list-header__item list-header__item--date">Date</span>
-              <span class="list-header__item list-header__item--score">Score</span>
+        </div>
+        <div class="column__content column__content--scrollable">
+          <div class="nav-items">
+            <div class="nav-item" (click)="activeView.set('home')"
+               [class.active]="activeView() === 'home'">
+              <lucide-angular name="Home" class="nav-item__icon" size="16"></lucide-angular>
+              <span class="nav-item__label">Home</span>
             </div>
-            @for (card of filteredCards(); track card.id) {
-              <button class="list-item" (click)="selectCard(card)" [class.selected]="selectedCard()?.id === card.id">
-                <span class="list-item__icon">{{ card.icon }}</span>
-                <span class="list-item__name">{{ card.title }}</span>
-                <span class="list-item__type">{{ card.type }}</span>
-                <span class="list-item__date">{{ card.date }}</span>
-                @if (card.score) {
-                  <span class="list-item__score">{{ card.score }}</span>
-                }
-              </button>
-            }
+            <div class="nav-item" (click)="activeView.set('auth')"
+               [class.active]="activeView() === 'auth'">
+              <lucide-angular name="Lock" class="nav-item__icon" size="16"></lucide-angular>
+              <span class="nav-item__label">Auth</span>
+            </div>
+            <div class="nav-item" (click)="activeView.set('sqlite')"
+               [class.active]="activeView() === 'sqlite'">
+              <lucide-angular name="Database" class="nav-item__icon" size="16"></lucide-angular>
+              <span class="nav-item__label">SQLite</span>
+            </div>
+            <div class="nav-item" (click)="activeView.set('devtools')"
+               [class.active]="activeView() === 'devtools'">
+              <lucide-angular name="Settings" class="nav-item__icon" size="16"></lucide-angular>
+              <span class="nav-item__label">DevTools</span>
+            </div>
           </div>
-        }
-      </div>
-    </section>
-
-    <!-- MIDDLE SPLITTER -->
-    <div class="splitter splitter--vertical"
-         (mousedown)="startResize($event, 'middle')">
-      <div class="splitter__handle">
-        <div class="splitter__grip splitter__grip--vertical"></div>
-      </div>
-    </div>
-
-    <!-- RIGHT COLUMN - Preview/Detail View -->
-    <section class="column column--right" [style.flex-basis]="rightColumnSize() + '%'">
-      <div class="column__header">
-        <div class="column__title">
-          <span class="column__icon">👁️</span>
-          <span class="column__label">Preview</span>
         </div>
-        <div class="column__actions">
-          @if (selectedCard()) {
-            <button class="column__action-btn" (click)="openCardWindow(selectedCard()!)" title="Open in window">
-              🚀
-            </button>
-          }
+      </section>
+  
+      <!-- LEFT SPLITTER -->
+      <div class="splitter splitter--vertical"
+           (mousedown)="startResize($event)">
+        <div class="splitter__handle">
+          <div class="splitter__grip splitter__grip--vertical"></div>
         </div>
+      </div>
+  
+      <!-- RIGHT COLUMN - Main Content -->
+      <section class="column column--right" [style.flex]="'0 0 ' + rightColumnSize() + '%'">
+<div class="column__header">
+          <div class="column__title">
+            <lucide-angular name="Eye" class="column__icon" size="16"></lucide-angular>
+            <span class="column__label">Preview</span>
+          </div>
+         <div class="column__actions">
+           <button type="button" class="column__action-btn" (click)="toggleViewMode()" title="Toggle view">
+             <lucide-angular [name]="viewMode() === 'grid' ? 'Menu' : 'Grid'" size="16"></lucide-angular>
+           </button>
+           @if (selectedCard()) {
+             <button type="button" class="column__action-btn" (click)="openCardWindow(selectedCard()!)" title="Open in window">
+               <lucide-angular name="Rocket" class="btn__icon" size="16"></lucide-angular>
+               <span class="btn__label">Open Window</span>
+             </button>
+           }
+         </div>
       </div>
 
       <div class="column__content column__content--scrollable">
         @if (selectedCard()) {
-          <div class="preview-panel">
-            <div class="preview-panel__icon" [style.background]="selectedCard()!.color">
-              {{ selectedCard()!.icon }}
-            </div>
+<div class="preview-panel">
+             <div class="preview-panel__icon" [style.background]="selectedCard()!.color">
+               <lucide-angular [name]="selectedCard()!.icon" size="32"></lucide-angular>
+             </div>
             <h3 class="preview-panel__title">{{ selectedCard()!.title }}</h3>
             <p class="preview-panel__description">{{ selectedCard()!.description }}</p>
 
@@ -163,32 +135,32 @@
               }
             </div>
 
-            <div class="preview-panel__actions">
-              <button class="btn btn--primary" (click)="openCardWindow(selectedCard()!)">
-                <span class="btn__icon">🚀</span>
-                <span class="btn__label">Open Window</span>
-              </button>
+<div class="preview-panel__actions">
+               <button type="button" class="btn btn--primary" (click)="openCardWindow(selectedCard()!)">
+                 <lucide-angular name="Rocket" class="btn__icon" size="16"></lucide-angular>
+                 <span class="btn__label">Open Window</span>
+               </button>
             </div>
 
             <div class="preview-panel__quick-actions">
               <h4 class="quick-actions__title">Quick Actions</h4>
-              <div class="quick-actions__grid">
-                <button class="quick-action" title="Share">
-                  <span class="quick-action__icon">📤</span>
-                  <span class="quick-action__label">Share</span>
-                </button>
-                <button class="quick-action" title="Copy">
-                  <span class="quick-action__icon">📋</span>
-                  <span class="quick-action__label">Copy</span>
-                </button>
-                <button class="quick-action" title="Tag">
-                  <span class="quick-action__icon">🏷️</span>
-                  <span class="quick-action__label">Tag</span>
-                </button>
-                <button class="quick-action" title="Delete">
-                  <span class="quick-action__icon">🗑️</span>
-                  <span class="quick-action__label">Delete</span>
-                </button>
+<div class="quick-actions__grid">
+                 <button type="button" class="quick-action" title="Share">
+                   <lucide-angular name="Share2" class="quick-action__icon" size="16"></lucide-angular>
+                   <span class="quick-action__label">Share</span>
+                 </button>
+                 <button type="button" class="quick-action" title="Copy">
+                   <lucide-angular name="Copy" class="quick-action__icon" size="16"></lucide-angular>
+                   <span class="quick-action__label">Copy</span>
+                 </button>
+                 <button type="button" class="quick-action" title="Tag">
+                   <lucide-angular name="Tag" class="quick-action__icon" size="16"></lucide-angular>
+                   <span class="quick-action__label">Tag</span>
+                 </button>
+                 <button type="button" class="quick-action" title="Delete">
+                   <lucide-angular name="Trash2" class="quick-action__icon" size="16"></lucide-angular>
+                   <span class="quick-action__label">Delete</span>
+                 </button>
               </div>
             </div>
           </div>
