@@ -44,9 +44,9 @@ done
 # Build Angular frontend
 build_angular() {
     print_step "Building Angular frontend..."
-    
+
     cd "$SCRIPT_DIR/frontend"
-    
+
     if [ ! -d "node_modules" ]; then
         if command -v bun &> /dev/null; then
             bun install
@@ -54,13 +54,13 @@ build_angular() {
             npm install
         fi
     fi
-    
+
     if command -v bun &> /dev/null; then
         bun run build
     else
         npm run build
     fi
-    
+
     cd "$SCRIPT_DIR"
     echo "  ✓ Angular built"
 }

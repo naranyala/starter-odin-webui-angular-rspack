@@ -2,22 +2,7 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LoggerService } from '../../core/logger.service';
-import { NotificationService } from '../../core/notification.service';
-import { ApiService } from '../../core/api.service';
-
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  age: number;
-  created_at: string;
-}
-
-export interface UserStats {
-  total_users: number;
-  today_count: number;
-  unique_domains: number;
-}
+import { DemoDataService, User, UserStats } from '../../core/demo-data.service';
 
 @Component({
   selector: 'app-sqlite-crud',
@@ -31,7 +16,7 @@ export interface UserStats {
             <span class="logo-icon">🗄️</span>
           </div>
           <h1 class="sqlite-title">SQLite CRUD Demo</h1>
-          <p class="sqlite-subtitle">Complete CRUD operations with Vlang backend</p>
+          <p class="sqlite-subtitle">Complete CRUD operations with in-memory data</p>
         </div>
 
         <div class="stats-bar">
@@ -161,8 +146,7 @@ export interface UserStats {
 })
 export class SqliteCrudComponent {
   private readonly logger = inject(LoggerService);
-  private readonly notifications = inject(NotificationService);
-  private readonly api = inject(ApiService);
+  private readonly demoData = inject(DemoDataService);
 
   activeTab = signal<'list' | 'create'>('list');
   isLoading = signal(false);
@@ -205,16 +189,13 @@ export class SqliteCrudComponent {
   async loadUsers(): Promise<void> {
     this.isLoading.set(true);
     try {
-      const [users, stats] = await Promise.all([
-        this.api.callOrThrow<User[]>('getUsers'),
-        this.api.callOrThrow<UserStats>('getUserStats'),
-      ]);
+      const users = this.demoData.getUsers();
+      const stats = this.demoData.getUserStats();
       this.users.set(users);
       this.stats.set(stats);
       this.filterUsers();
     } catch (error) {
-      this.notifications.error('Failed to load users');
-      this.logger.error('Load users error', error);
+      this.logger.error('Failed to load users', error);
     } finally {
       this.isLoading.set(false);
     }
@@ -222,19 +203,18 @@ export class SqliteCrudComponent {
 
   async createUser(): Promise<void> {
     if (!this.newUser().name || !this.newUser().email || !this.newUser().age) {
-      this.notifications.error('Please fill in all fields');
+      this.logger.warn('Create user validation failed');
       return;
     }
 
     this.isLoading.set(true);
     try {
-      await this.api.callOrThrow('createUser', [this.newUser()]);
-      this.notifications.success('User created successfully');
+      this.demoData.createUser(this.newUser());
+      this.logger.info('User created successfully');
       this.newUser.set({ name: '', email: '', age: 25 });
       this.setActiveTab('list');
     } catch (error) {
-      this.notifications.error('Failed to create user');
-      this.logger.error('Create user error', error);
+      this.logger.error('Failed to create user', error);
     } finally {
       this.isLoading.set(false);
     }
@@ -243,7 +223,6 @@ export class SqliteCrudComponent {
   async editUser(user: User): Promise<void> {
     this.newUser.set({ ...user });
     this.setActiveTab('create');
-    // In production: call updateUser API
   }
 
   async deleteUser(user: User): Promise<void> {
@@ -253,12 +232,11 @@ export class SqliteCrudComponent {
 
     this.isLoading.set(true);
     try {
-      await this.api.callOrThrow('deleteUser', [user.id]);
-      this.notifications.success('User deleted');
+      this.demoData.deleteUser(user.id);
+      this.logger.info('User deleted');
       await this.loadUsers();
     } catch (error) {
-      this.notifications.error('Failed to delete user');
-      this.logger.error('Delete user error', error);
+      this.logger.error('Failed to delete user', error);
     } finally {
       this.isLoading.set(false);
     }

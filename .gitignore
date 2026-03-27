@@ -3,5 +3,13 @@ frontend/node_modules/
 frontend/dist
 frontend/.angular
 
+frontend-legacy/node_modules/
+frontend-legacy/dist
+frontend-legacy/.angular
+
+*/node_modules/*
+
 dist/
 build/
+
+thirdparty/*
