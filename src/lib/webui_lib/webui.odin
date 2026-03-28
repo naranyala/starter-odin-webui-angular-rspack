@@ -1,6 +1,7 @@
 package webui
 
 import "core:c"
+import "core:mem"
 
 // WebUI Library - Odin Bindings
 // https://webui.me
@@ -96,37 +97,37 @@ foreign webui {
 	webui_set_file_handler :: proc "c" (win : c.size_t, handler : File_Handler_Proc) ---
 }
 
-// Wrapper functions
+// Wrapper functions - accept cstring directly to avoid conversion issues
 new_window :: proc() -> Window { return cast(Window) webui_new_window() }
 new_window_id :: proc(id : Window) { webui_new_window_id(cast(c.size_t) id) }
 get_new_window_id :: proc() -> Window { return cast(Window) webui_get_new_window_id() }
-show :: proc(win : Window, content : string) -> bool { return webui_show(win, cast(cstring) content) }
-show_browser :: proc(win : Window, content : string, browser : Browser) -> bool { return webui_show_browser(win, cast(cstring) content, browser) }
-show_webview :: proc(win : Window, content : string) -> bool { return webui_show_wv(win, cast(cstring) content) }
+show :: proc(win : Window, content : cstring) -> bool { return webui_show(win, content) }
+show_browser :: proc(win : Window, content : cstring, browser : Browser) -> bool { return webui_show_browser(win, content, browser) }
+show_webview :: proc(win : Window, content : cstring) -> bool { return webui_show_wv(win, content) }
 close :: proc(win : Window) { webui_close(win) }
 destroy :: proc(win : Window) { webui_destroy(win) }
 exit :: proc() { webui_exit() }
 wait :: proc() { webui_wait() }
 is_shown :: proc(win : Window) -> bool { return webui_is_shown(win) }
 set_timeout :: proc(timeout : c.size_t) { webui_set_timeout(timeout) }
-set_root_folder :: proc(win : Window, path : string) { webui_set_root_folder(win, cast(cstring) path) }
-set_default_root_folder :: proc(path : string) { webui_set_default_root_folder(cast(cstring) path) }
+set_root_folder :: proc(win : Window, path : cstring) { webui_set_root_folder(win, path) }
+set_default_root_folder :: proc(path : cstring) { webui_set_default_root_folder(path) }
 set_kiosk :: proc(win : Window, kiosk : bool) { webui_set_kiosk(win, kiosk) }
 set_hide :: proc(win : Window, hidden : bool) { webui_set_hide(win, hidden) }
 set_size :: proc(win : Window, width : c.size_t, height : c.size_t) { webui_set_size(win, width, height) }
 set_position :: proc(win : Window, x : c.size_t, y : c.size_t) { webui_set_position(win, x, y) }
-set_icon :: proc(win : Window, icon : string, icon_type : string) { webui_set_icon(win, cast(cstring) icon, cast(cstring) icon_type) }
-set_profile :: proc(win : Window, name : string, path : string) { webui_set_profile(win, cast(cstring) name, cast(cstring) path) }
-set_proxy :: proc(win : Window, proxy_server : string) { webui_set_proxy(win, cast(cstring) proxy_server) }
+set_icon :: proc(win : Window, icon : cstring, icon_type : cstring) { webui_set_icon(win, icon, icon_type) }
+set_profile :: proc(win : Window, name : cstring, path : cstring) { webui_set_profile(win, name, path) }
+set_proxy :: proc(win : Window, proxy_server : cstring) { webui_set_proxy(win, proxy_server) }
 set_public :: proc(win : Window, public : bool) { webui_set_public(win, public) }
 set_port :: proc(win : Window, port : c.size_t) -> bool { return webui_set_port(win, port) }
 set_config :: proc(option : Config, status : bool) -> bool { return webui_set_config(option, status) }
 set_runtime :: proc(win : Window, runtime : Runtime) { webui_set_runtime(win, runtime) }
-set_tls_certificate :: proc(certificate_pem : string, private_key_pem : string) -> bool { return webui_set_tls_certificate(cast(cstring) certificate_pem, cast(cstring) private_key_pem) }
-bind :: proc(win : Window, element : string, callback : Event_Callback) -> Bind_ID { return webui_bind(win, cast(cstring) element, callback) }
-run :: proc(win : Window, script : string) { webui_run(win, cast(cstring) script) }
-script :: proc(win : Window, script : string, timeout : c.size_t, buffer : []u8) -> bool { return webui_script(win, cast(cstring) script, timeout, cast(cstring) &buffer[0], len(buffer)) }
-navigate :: proc(win : Window, url : string) { webui_navigate(win, cast(cstring) url) }
+set_tls_certificate :: proc(certificate_pem : cstring, private_key_pem : cstring) -> bool { return webui_set_tls_certificate(certificate_pem, private_key_pem) }
+bind :: proc(win : Window, element : cstring, callback : Event_Callback) -> Bind_ID { return webui_bind(win, element, callback) }
+run :: proc(win : Window, script : cstring) { webui_run(win, script) }
+script :: proc(win : Window, script : cstring, timeout : c.size_t, buffer : []u8) -> bool { return webui_script(win, script, timeout, cast(cstring) &buffer[0], len(buffer)) }
+navigate :: proc(win : Window, url : cstring) { webui_navigate(win, url) }
 get_url :: proc(win : Window) -> string {
 	url_c := webui_get_url(win)
 	if url_c == nil || len(url_c) == 0 {
@@ -156,23 +157,23 @@ event_get_string_at :: proc(e : ^Event, idx : c.size_t) -> string {
 event_get_bool :: proc(e : ^Event) -> bool { return webui_get_bool(e) }
 event_get_bool_at :: proc(e : ^Event, idx : c.size_t) -> bool { return webui_get_bool_at(e, idx) }
 event_return_int :: proc(e : ^Event, n : i64) { webui_return_int(e, n) }
-event_return_string :: proc(e : ^Event, s : string) { webui_return_string(e, cast(cstring) s) }
+event_return_string :: proc(e : ^Event, s : cstring) { webui_return_string(e, s) }
 event_return_bool :: proc(e : ^Event, b : bool) { webui_return_bool(e, b) }
-encode :: proc(data : string) -> string {
-	encoded_c := webui_encode(cast(cstring) data)
+encode :: proc(data : cstring) -> cstring {
+	encoded_c := webui_encode(data)
 	if encoded_c == nil || len(encoded_c) == 0 {
 		return ""
 	}
 	defer webui_free(cast(rawptr) encoded_c)
-	return cast(string) encoded_c
+	return encoded_c
 }
-decode :: proc(data : string) -> string {
-	decoded_c := webui_decode(cast(cstring) data)
+decode :: proc(data : cstring) -> cstring {
+	decoded_c := webui_decode(data)
 	if decoded_c == nil || len(decoded_c) == 0 {
 		return ""
 	}
 	defer webui_free(cast(rawptr) decoded_c)
-	return cast(string) decoded_c
+	return decoded_c
 }
 clean :: proc() { webui_clean() }
 delete_all_profiles :: proc() { webui_delete_all_profiles() }

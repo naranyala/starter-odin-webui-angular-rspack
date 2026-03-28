@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { DEFAULT_TIMEOUT_MS } from '../constants/app.constants';
 
 /**
  * RPC Request interface
@@ -31,7 +32,7 @@ export class RpcClientService {
     timeout: any;
   }>();
 
-  private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
+  private readonly DEFAULT_TIMEOUT = DEFAULT_TIMEOUT_MS;
 
   constructor() {
     // Expose response handler to global scope for WebUI callbacks

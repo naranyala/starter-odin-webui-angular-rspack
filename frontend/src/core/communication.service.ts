@@ -2,6 +2,7 @@
 // Supports: WebUI Bridge, Event Bus, Shared State, Message Queue, Broadcast
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { ApiService } from './api.service';
+import { DEFAULT_TIMEOUT_MS } from '../app/constants/app.constants';
 
 // ============================================================================
 // Type Definitions
@@ -109,7 +110,7 @@ export class CommunicationService {
       setTimeout(() => {
         window.removeEventListener(responseEvent, handler as EventListener);
         reject(new Error(`Timeout waiting for response: ${functionName}`));
-      }, 30000);
+      }, DEFAULT_TIMEOUT_MS);
     });
   }
 

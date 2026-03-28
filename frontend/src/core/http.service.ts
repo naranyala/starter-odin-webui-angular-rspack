@@ -1,6 +1,7 @@
 // Simplified HTTP client service
 import { Injectable } from '@angular/core';
 import { StorageService } from './storage.service';
+import { DEFAULT_TIMEOUT_MS } from '../app/constants/app.constants';
 
 export interface HttpRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -54,7 +55,7 @@ export class HttpService {
     const fullUrl = this.baseUrl && !url.startsWith('http') ? `${this.baseUrl}/${url}` : url;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), options?.timeout ?? 30000);
+    const timeoutId = setTimeout(() => controller.abort(), options?.timeout ?? DEFAULT_TIMEOUT_MS);
 
     try {
       const response = await fetch(fullUrl, {

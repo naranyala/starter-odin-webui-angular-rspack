@@ -3,7 +3,7 @@
 package main
 
 import "core:fmt"
-import webui "./webui_lib"
+import webui "../lib/webui_lib"
 import services "./services"
 
 // ============================================================================

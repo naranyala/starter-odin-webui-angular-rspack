@@ -5,7 +5,24 @@ import "core:fmt"
 import "core:strings"
 import "core:c"
 import "core:hash_map"
+import "core:strconv"
 import webui "../webui_lib"
+
+// Global window reference for event emission
+my_window : webui.Window
+
+// Set the global window reference (call during app initialization)
+set_window :: proc(win : webui.Window) {
+	my_window = win
+}
+
+// Helper to remove element from slice by index
+remove_from_slice :: proc($T : typeid, slice : []$T, index : int) -> []$T {
+	if index < 0 || index >= len(slice) {
+		return slice
+	}
+	return slice[..index] ++ slice[index+1..]
+}
 
 // ============================================================================
 // RPC System
@@ -44,11 +61,49 @@ rpc_register :: proc(method : string, handler : Rpc_Handler) {
 // Handle RPC call from frontend
 rpc_handle_call :: proc "c" (e : ^webui.Event) {
 	request_json := webui.webui_get_string(e)
-	
-	// Parse request (simplified - use proper JSON parser in production)
+
+	// Parse JSON request (simple parser for basic RPC)
 	request := Rpc_Request{}
-	// TODO: Parse JSON to extract id, method, params
 	
+	// Simple JSON parsing - extract id, method, params
+	// Format: {"id":123,"method":"greet","params":"value"}
+	if strings.contains(request_json, "\"id\"") {
+		// Extract id
+		id_start := strings.index(request_json, "\"id\":") + 5
+		if id_start >= 5 {
+			id_end := id_start
+			for id_end < len(request_json) && request_json[id_end] >= '0' && request_json[id_end] <= '9' {
+				id_end += 1
+			}
+			if id_end > id_start {
+				id_str := request_json[id_start:id_end]
+				request.id, _ = strconv.parse_int(id_str, 10, 64)
+			}
+		}
+	}
+	
+	if strings.contains(request_json, "\"method\"") {
+		// Extract method
+		method_start := strings.index(request_json, "\"method\":\"") + 10
+		if method_start >= 10 {
+			method_end := strings.index(request_json[method_start:], "\"")
+			if method_end > 0 {
+				request.method = request_json[method_start : method_start+method_end]
+			}
+		}
+	}
+	
+	if strings.contains(request_json, "\"params\"") {
+		// Extract params
+		params_start := strings.index(request_json, "\"params\":\"") + 10
+		if params_start >= 10 {
+			params_end := strings.index(request_json[params_start:], "\"")
+			if params_end > 0 {
+				request.params = request_json[params_start : params_start+params_end]
+			}
+		}
+	}
+
 	// Find handler
 	handler, ok := hash_map.get(&rpc_registry.handlers, request.method)
 	
@@ -112,7 +167,7 @@ event_bus_off :: proc(topic : string, handler : Event_Handler) {
 	if ok {
 		for i, h in handlers {
 			if h == handler {
-				handlers = remove(handlers, i)
+				handlers = remove_from_slice(Event_Handler, handlers, i)
 				break
 			}
 		}

@@ -3,7 +3,7 @@ package main
 
 import "core:fmt"
 import "core:c"
-import webui "../../webui_lib"
+import webui "../../src/lib/webui_lib"
 
 my_window : webui.Window
 

@@ -3,7 +3,7 @@ package main
 
 import "core:fmt"
 import "core:os"
-import webui "./webui_lib"
+import webui "./src/lib/webui_lib"
 
 main :: proc() {
 	fmt.println("Starting Odin + WebUI + Angular...")
@@ -34,12 +34,9 @@ main :: proc() {
 	
 	// Set root folder for WebUI to serve static files
 	webui.set_root_folder(win, "frontend")
-	
+
 	// Navigate to index.html
-	webui.show(win, cstring("index.html"))
-	
-	// Maximize the window
-	webui.maximize(win)
+	webui.show(win, "index.html")
 	
 	fmt.println("Window open - Ctrl+C to exit")
 	webui.wait()

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Subject, Observable } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { DEFAULT_TIMEOUT_MS } from '../constants/app.constants';
 
 // ============================================================================
 // RPC Client Service
@@ -27,7 +28,7 @@ export class RpcClientService {
     timeout: any;
   }>();
 
-  private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
+  private readonly DEFAULT_TIMEOUT = DEFAULT_TIMEOUT_MS;
 
   constructor() {
     // Expose response handler to global scope for WebUI callbacks
@@ -292,7 +293,7 @@ export class MessageQueueService {
   /**
    * Request-Response pattern via message queue
    */
-  request<T>(type: string, payload: any, timeout = 30000): Promise<T> {
+  request<T>(type: string, payload: any, timeout = DEFAULT_TIMEOUT_MS): Promise<T> {
     const correlationId = this.generateId();
     
     return new Promise((resolve, reject) => {
