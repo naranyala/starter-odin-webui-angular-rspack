@@ -2,6 +2,7 @@
 package services
 
 import "core:fmt"
+import "core:sync"
 import "../lib/di"
 import "../lib/errors"
 import "../lib/logger"
@@ -142,6 +143,7 @@ Logger_Service :: struct {
 	base:      Service,
 	log_path:  string,
 	log_level: int,
+	mutex:     sync.Mutex,
 }
 
 logger_service_create :: proc() -> (^Logger_Service, errors.Error) {
@@ -152,6 +154,8 @@ logger_service_create :: proc() -> (^Logger_Service, errors.Error) {
 }
 
 logger_service_init :: proc(s: ^Logger_Service, log_path: string) -> errors.Error {
+	sync.lock(&s.mutex)
+	defer sync.unlock(&s.mutex)
 	s.log_path = log_path
 	s.base.is_initialized = true
 	logger.log_info("Logger Service initialized")
@@ -159,11 +163,15 @@ logger_service_init :: proc(s: ^Logger_Service, log_path: string) -> errors.Erro
 }
 
 logger_service_set_level :: proc(s: ^Logger_Service, level: int) -> errors.Error {
+	sync.lock(&s.mutex)
+	defer sync.unlock(&s.mutex)
 	s.log_level = level
 	return errors.Error{code = errors.Error_Code.None}
 }
 
 logger_service_log :: proc(s: ^Logger_Service, level: int, message: string) -> errors.Error {
+	sync.lock(&s.mutex)
+	defer sync.unlock(&s.mutex)
 	if level >= s.log_level {
 		logger.log_info(message)
 	}

@@ -1,6 +1,6 @@
 // Multi-channel communication service for backend-frontend communication
 // Supports: WebUI Bridge, Event Bus, Shared State, Message Queue, Broadcast
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, inject, OnDestroy } from '@angular/core';
 import { ApiService } from './api.service';
 import { DEFAULT_TIMEOUT_MS } from '../app/constants/app.constants';
 
@@ -45,7 +45,7 @@ export type StateChangeHandler = (key: string, value: unknown) => void;
 // ============================================================================
 
 @Injectable({ providedIn: 'root' })
-export class CommunicationService {
+export class CommunicationService implements OnDestroy {
   private readonly api = inject(ApiService);
 
   // State Signals
@@ -64,6 +64,12 @@ export class CommunicationService {
   private readonly messageQueue = signal<Message[]>([]);
   private readonly eventHandlers = new Map<string, Set<EventHandler>>();
   private readonly stateHandlers = new Set<StateChangeHandler>();
+  
+  // Event listener references for cleanup
+  private readonly eventListeners: Array<{ event: string; listener: EventListener }> = [];
+  
+  // Interval reference for cleanup
+  private stateSyncInterval?: ReturnType<typeof setInterval>;
 
   // Public Signals
   readonly stats$ = this.stats.asReadonly();
@@ -149,7 +155,9 @@ export class CommunicationService {
   emit(event: string, data: unknown): void {
     const handlers = this.eventHandlers.get(event);
     if (handlers) {
-      handlers.forEach(handler => handler(data, event));
+      handlers.forEach(handler => {
+        handler(data, event);
+      });
     }
 
     // Also notify backend
@@ -185,7 +193,9 @@ export class CommunicationService {
     await this.api.call('setSharedState', [key, value]).catch(() => {});
     
     // Notify local subscribers
-    this.stateHandlers.forEach(handler => handler(key, value));
+    this.stateHandlers.forEach(handler => {
+      handler(key, value);
+    });
   }
 
   /**
@@ -322,28 +332,34 @@ export class CommunicationService {
 
   private setupEventListeners(): void {
     // Listen for backend events
-    window.addEventListener('backend-event', ((event: CustomEvent) => {
+    const backendEventHandler = ((event: CustomEvent) => {
       const { event: eventName, data } = event.detail;
       this.emit(eventName, data);
-    }) as EventListener);
+    }) as EventListener;
+    window.addEventListener('backend-event', backendEventHandler);
+    this.eventListeners.push({ event: 'backend-event', listener: backendEventHandler });
 
     // Listen for state updates
-    window.addEventListener('state-update', ((event: CustomEvent) => {
+    const stateUpdateHandler = ((event: CustomEvent) => {
       const { key, value } = event.detail;
       this.sharedState.update(state => ({ ...state, [key]: value }));
       this.stateHandlers.forEach(handler => handler(key, value));
-    }) as EventListener);
+    }) as EventListener;
+    window.addEventListener('state-update', stateUpdateHandler);
+    this.eventListeners.push({ event: 'state-update', listener: stateUpdateHandler });
 
     // Listen for broadcast messages
-    window.addEventListener('broadcast-message', ((event: CustomEvent) => {
+    const broadcastHandler = ((event: CustomEvent) => {
       const { event: eventName, data } = event.detail;
       this.emit('broadcast', { event: eventName, data });
-    }) as EventListener);
+    }) as EventListener;
+    window.addEventListener('broadcast-message', broadcastHandler);
+    this.eventListeners.push({ event: 'broadcast-message', listener: broadcastHandler });
   }
 
   private setupStateSync(): void {
     // Periodically sync state with backend
-    setInterval(async () => {
+    this.stateSyncInterval = setInterval(async () => {
       try {
         const backendState = await this.api.call<SharedState>('getSharedState').catch(() => ({}));
         this.sharedState.update(state => ({ ...state, ...backendState }));
@@ -351,6 +367,30 @@ export class CommunicationService {
         // Ignore sync errors
       }
     }, 5000);
+  }
+
+  /**
+   * Cleanup to prevent memory leaks
+   */
+  ngOnDestroy(): void {
+    // Remove all event listeners
+    this.eventListeners.forEach(({ event, listener }) => {
+      window.removeEventListener(event, listener);
+    });
+    this.eventListeners.length = 0;
+
+    // Clear state sync interval
+    if (this.stateSyncInterval) {
+      clearInterval(this.stateSyncInterval);
+      this.stateSyncInterval = undefined;
+    }
+
+    // Clear event handlers
+    this.eventHandlers.clear();
+    this.stateHandlers.clear();
+    
+    // Clear message queue
+    this.messageQueue.set([]);
   }
 
   private incrementStats(channel: MessageChannel, type: MessageType): void {

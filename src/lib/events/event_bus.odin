@@ -4,6 +4,7 @@ package events
 import "core:fmt"
 import "core:hash_map"
 import "core:container/queue"
+import "core:sync"
 import "../errors"
 
 Event_Type :: enum {
@@ -34,6 +35,7 @@ Event_Bus :: struct {
 	subscribers: hash_map.HashMap(Event_Type, []proc(data: rawptr)),
 	queue:      queue.Queue(Event_Data),
 	dispatcher: ^Event_Dispatcher,
+	mutex:      sync.Mutex,
 }
 
 Event_Dispatcher :: struct {
@@ -48,6 +50,8 @@ create_event_bus :: proc() -> (Event_Bus, errors.Error) {
 }
 
 destroy_event_bus :: proc(bus: ^Event_Bus) -> errors.Error {
+	sync.lock(&bus.mutex)
+	defer sync.unlock(&bus.mutex)
 	for key, handlers in bus.subscribers {
 		delete(handlers)
 	}
@@ -57,6 +61,8 @@ destroy_event_bus :: proc(bus: ^Event_Bus) -> errors.Error {
 }
 
 subscribe :: proc(bus: ^Event_Bus, event_type: Event_Type, callback: proc(data: rawptr)) -> errors.Error {
+	sync.lock(&bus.mutex)
+	defer sync.unlock(&bus.mutex)
 	handlers, ok := hash_map.get(&bus.subscribers, event_type)
 	if !ok {
 		handlers = make([]proc(data: rawptr), 0)
@@ -67,6 +73,8 @@ subscribe :: proc(bus: ^Event_Bus, event_type: Event_Type, callback: proc(data: 
 }
 
 unsubscribe :: proc(bus: ^Event_Bus, event_type: Event_Type, callback: proc(data: rawptr)) -> errors.Error {
+	sync.lock(&bus.mutex)
+	defer sync.unlock(&bus.mutex)
 	handlers_ptr, ok := hash_map.get(&bus.subscribers, event_type)
 	if ok && len(handlers_ptr) > 0 {
 		handlers := handlers_ptr
@@ -92,6 +100,8 @@ unsubscribe :: proc(bus: ^Event_Bus, event_type: Event_Type, callback: proc(data
 }
 
 emit :: proc(bus: ^Event_Bus, event_type: Event_Type, data: rawptr) -> errors.Error {
+	sync.lock(&bus.mutex)
+	defer sync.unlock(&bus.mutex)
 	event := Event_Data{
 		event_type = event_type,
 		data       = data,
@@ -101,28 +111,50 @@ emit :: proc(bus: ^Event_Bus, event_type: Event_Type, data: rawptr) -> errors.Er
 }
 
 emit_sync :: proc(bus: ^Event_Bus, event_type: Event_Type, data: rawptr) -> errors.Error {
-	if handlers, ok := hash_map.get(&bus.subscribers, event_type); ok {
-		for callback in handlers {
+	sync.lock(&bus.mutex)
+	handlers, ok := hash_map.get(&bus.subscribers, event_type)
+	var handlers_copy: []proc(data: rawptr)
+	if ok {
+		handlers_copy = make([]proc(data: rawptr), len(handlers))
+		copy(handlers_copy, handlers)
+	}
+	sync.unlock(&bus.mutex)
+	if ok {
+		for callback in handlers_copy {
 			callback(data)
 		}
+		delete(handlers_copy)
 	}
 	return errors.Error{code = errors.Error_Code.None}
 }
 
 process_events :: proc(bus: ^Event_Bus) -> errors.Error {
+	sync.lock(&bus.mutex)
+	// Pop all events into local slice
+	events := make([]Event_Data, 0, queue.len(&bus.queue))
 	for queue.len(&bus.queue) > 0 {
 		event := queue.pop(&bus.queue)
+		append(&events, event)
+	}
+	sync.unlock(&bus.mutex)
+	// Emit each event without holding lock
+	for event in events {
 		emit_sync(bus, event.event_type, event.data)
 	}
+	delete(events)
 	return errors.Error{code = errors.Error_Code.None}
 }
 
 clear_queue :: proc(bus: ^Event_Bus) -> errors.Error {
+	sync.lock(&bus.mutex)
+	defer sync.unlock(&bus.mutex)
 	queue.clear(&bus.queue)
 	return errors.Error{code = errors.Error_Code.None}
 }
 
 subscriber_count :: proc(bus: ^Event_Bus, event_type: Event_Type) -> int {
+	sync.lock(&bus.mutex)
+	defer sync.unlock(&bus.mutex)
 	if handlers, ok := hash_map.get(&bus.subscribers, event_type); ok {
 		return len(handlers)
 	}

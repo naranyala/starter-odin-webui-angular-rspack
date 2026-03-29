@@ -4,6 +4,7 @@ package services
 import "core:fmt"
 import "core:hash_map"
 import "core:time"
+import "core:sync"
 import "../lib/di"
 import "../lib/errors"
 import "../lib/events"
@@ -19,6 +20,7 @@ Cache_Service :: struct {
 	logger:    ^Logger,
 	event_bus: ^events.Event_Bus,
 	ttl:       time.Duration,
+	mutex:     sync.Mutex,
 }
 
 cache_service_create :: proc(inj: ^di.Injector) -> (^Cache_Service, errors.Error) {
@@ -43,6 +45,8 @@ cache_service_create :: proc(inj: ^di.Injector) -> (^Cache_Service, errors.Error
 }
 
 cache_service_set :: proc(svc: ^Cache_Service, key: string, value: rawptr) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if key == "" {
 		return errors.err_invalid_param("Cache key cannot be empty")
 	}
@@ -60,6 +64,8 @@ cache_service_set :: proc(svc: ^Cache_Service, key: string, value: rawptr) -> er
 }
 
 cache_service_get :: proc(svc: ^Cache_Service, key: string) -> (rawptr, errors.Error) {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if key == "" {
 		return nil, errors.err_invalid_param("Cache key cannot be empty")
 	}
@@ -75,6 +81,8 @@ cache_service_get :: proc(svc: ^Cache_Service, key: string) -> (rawptr, errors.E
 }
 
 cache_service_delete :: proc(svc: ^Cache_Service, key: string) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if key == "" {
 		return errors.err_invalid_param("Cache key cannot be empty")
 	}
@@ -84,12 +92,16 @@ cache_service_delete :: proc(svc: ^Cache_Service, key: string) -> errors.Error {
 }
 
 cache_service_clear :: proc(svc: ^Cache_Service) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	hash_map.clear(&svc.cache)
 	log_info(svc.logger, "Cache cleared")
 	return errors.Error{code = errors.Error_Code.None}
 }
 
 cache_service_cleanup :: proc(svc: ^Cache_Service) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	now := time.now()
 	count := 0
 	for key, entry in svc.cache {
@@ -105,10 +117,14 @@ cache_service_cleanup :: proc(svc: ^Cache_Service) -> errors.Error {
 }
 
 cache_service_size :: proc(svc: ^Cache_Service) -> (int, errors.Error) {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	return hash_map.len(&svc.cache), errors.Error{code = errors.Error_Code.None}
 }
 
 cache_service_has :: proc(svc: ^Cache_Service, key: string) -> (bool, errors.Error) {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if entry, ok := hash_map.get(&svc.cache, key); ok {
 		if time.now() < entry.expires_at {
 			return true, errors.Error{code = errors.Error_Code.None}
@@ -119,6 +135,8 @@ cache_service_has :: proc(svc: ^Cache_Service, key: string) -> (bool, errors.Err
 }
 
 cache_service_destroy :: proc(svc: ^Cache_Service) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	hash_map.destroy_hash_map(&svc.cache)
 	delete(svc)
 	return errors.Error{code = errors.Error_Code.None}

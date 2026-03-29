@@ -1,5 +1,9 @@
 // Application Models and Data Types
+// NOTE: User, Product, Order models are defined in src/handlers/webui_handlers.odin
+// to match frontend types exactly. This file contains only app-wide shared types.
 package models
+
+import "core:time"
 
 // ============================================================================
 // Application Types
@@ -15,20 +19,11 @@ App_Config :: struct {
     config_file : string,
 }
 
-// User model
-User :: struct {
-    id : string,
-    username : string,
-    email : string,
-    created_at : u64,
-    is_active : bool,
-}
-
 // Application state
 App_State :: struct {
     is_initialized : bool,
     is_running : bool,
-    current_user : ^User,
+    current_user : rawptr, // Pointer to User struct from handlers
     config : App_Config,
 }
 

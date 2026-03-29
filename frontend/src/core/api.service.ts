@@ -1,6 +1,7 @@
 // Modern API service with signals for backend communication
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject, OnDestroy } from '@angular/core';
 import { DEFAULT_TIMEOUT_MS } from '../app/constants/app.constants';
+import { EndpointName, EndpointRequest, EndpointResponse } from '../models';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -20,21 +21,24 @@ export interface ApiState {
 }
 
 @Injectable({ providedIn: 'root' })
-export class ApiService {
+export class ApiService implements OnDestroy {
   private readonly defaultTimeout = DEFAULT_TIMEOUT_MS;
-  
+
   // Internal state signals
   private readonly loading = signal(false);
   private readonly error = signal<string | null>(null);
   private readonly lastCallTime = signal<number | null>(null);
   private readonly callCount = signal(0);
   
+  // Track active event listeners for cleanup
+  private readonly activeListeners = new Map<string, EventListener>();
+
   // Public readonly signals
   readonly isLoading = this.loading.asReadonly();
   readonly error$ = this.error.asReadonly();
   readonly lastCallTime$ = this.lastCallTime.asReadonly();
   readonly callCount$ = this.callCount.asReadonly();
-  
+
   // Computed signals
   readonly hasError = computed(() => this.error() !== null);
   readonly isReady = computed(() => !this.loading() && this.error() === null);
@@ -46,7 +50,7 @@ export class ApiService {
     this.loading.set(true);
     this.error.set(null);
     this.callCount.update(count => count + 1);
-    
+
     return new Promise((resolve, reject) => {
       const timeoutMs = options?.timeoutMs ?? this.defaultTimeout;
       const responseEventName = `${functionName}_response`;
@@ -54,22 +58,27 @@ export class ApiService {
       const handler = (event: CustomEvent<ApiResponse<T>>) => {
         clearTimeout(timeoutId);
         window.removeEventListener(responseEventName, handler as EventListener);
-        
+        this.activeListeners.delete(responseEventName);
+
         this.loading.set(false);
         this.lastCallTime.set(Date.now());
-        
+
         if (!event.detail.success) {
           this.error.set(event.detail.error ?? 'Unknown error');
         }
-        
+
         resolve(event.detail);
       };
 
+      // Store listener for cleanup
+      this.activeListeners.set(responseEventName, handler as EventListener);
+
       const timeoutId = setTimeout(() => {
         window.removeEventListener(responseEventName, handler as EventListener);
+        this.activeListeners.delete(responseEventName);
         this.loading.set(false);
         this.error.set(`Request timeout after ${timeoutMs}ms`);
-        
+
         reject({
           success: false,
           error: `Request timeout after ${timeoutMs}ms`,
@@ -82,9 +91,10 @@ export class ApiService {
         if (typeof backendFn !== 'function') {
           clearTimeout(timeoutId);
           window.removeEventListener(responseEventName, handler as EventListener);
+          this.activeListeners.delete(responseEventName);
           this.loading.set(false);
           this.error.set(`Backend function not found: ${functionName}`);
-          
+
           reject({
             success: false,
             error: `Backend function not found: ${functionName}`,
@@ -96,10 +106,11 @@ export class ApiService {
       } catch (error) {
         clearTimeout(timeoutId);
         window.removeEventListener(responseEventName, handler as EventListener);
+        this.activeListeners.delete(responseEventName);
         this.loading.set(false);
         const errorMsg = error instanceof Error ? error.message : String(error);
         this.error.set(errorMsg);
-        
+
         reject({
           success: false,
           error: errorMsg,
@@ -118,6 +129,30 @@ export class ApiService {
     }
     return response.data as T;
   }
+
+  /**
+   * Typed call method using endpoint definitions
+   */
+  async callTyped<T extends EndpointName>(
+    functionName: T, 
+    ...args: EndpointRequest<T>
+  ): Promise<ApiResponse<EndpointResponse<T>>> {
+    return this.call<EndpointResponse<T>>(functionName, args as unknown[]);
+  }
+
+  /**
+   * Typed callOrThrow method using endpoint definitions
+   */
+  async callOrThrowTyped<T extends EndpointName>(
+    functionName: T, 
+    ...args: EndpointRequest<T>
+  ): Promise<EndpointResponse<T>> {
+    const response = await this.callTyped(functionName, ...args);
+    if (!response.success) {
+      throw new Error(response.error ?? 'Unknown error');
+    }
+    return response.data as EndpointResponse<T>;
+  }
   
   /**
    * Clear error state
@@ -134,5 +169,16 @@ export class ApiService {
     this.error.set(null);
     this.lastCallTime.set(null);
     this.callCount.set(0);
+  }
+
+  /**
+   * Cleanup to prevent memory leaks
+   */
+  ngOnDestroy(): void {
+    // Remove all active event listeners
+    this.activeListeners.forEach((listener, event) => {
+      window.removeEventListener(event, listener);
+    });
+    this.activeListeners.clear();
   }
 }

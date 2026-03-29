@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DataTableComponent, DataTableConfig } from '../shared/data-table.component';
+import { DataTableComponent } from '../shared/data-table.component';
+import { User, DataTableConfig, StatsUpdateEvent } from '../../models';
 
 @Component({
   selector: 'app-duckdb-users',
@@ -15,8 +16,8 @@ import { DataTableComponent, DataTableConfig } from '../shared/data-table.compon
   `
 })
 export class DuckdbUsersComponent {
-  @Input() items: any[] = [];
-  @Output() statsChange = new EventEmitter<{ type: string; count: number }>();
+  @Input() items: User[] = [];
+  @Output() statsChange = new EventEmitter<StatsUpdateEvent>();
 
   userConfig: DataTableConfig = {
     entityName: 'User',
@@ -46,7 +47,7 @@ export class DuckdbUsersComponent {
     ]
   };
 
-  onStatsUpdate(event: { type: string; count: number }): void {
+  onStatsUpdate(event: StatsUpdateEvent): void {
     this.statsChange.emit(event);
   }
 }

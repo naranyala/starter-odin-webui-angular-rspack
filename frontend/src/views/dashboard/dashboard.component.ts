@@ -13,22 +13,9 @@ import { ApiService } from '../../core/api.service';
 import { DuckdbUsersComponent } from '../duckdb/duckdb-users.component';
 import { DuckdbProductsComponent } from '../duckdb/duckdb-products.component';
 import { DuckdbOrdersComponent } from '../duckdb/duckdb-orders.component';
-
-export interface DashboardStats {
-  totalUsers: number;
-  totalProducts: number;
-  totalOrders: number;
-  totalRevenue: number;
-  activeUsers: number;
-  pendingOrders: number;
-}
-
-export interface NavItem {
-  id: string;
-  label: string;
-  icon: string;
-  active: boolean;
-}
+import { DashboardStats, NavItem, User, Product, Order, StatsUpdateEvent } from '../../models';
+import { DocumentationViewerComponent } from '../documentation/documentation-viewer.component';
+import { DuckDBCrudDemoComponent } from '../demo/duckdb-crud-demo.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -39,6 +26,8 @@ export interface NavItem {
     DuckdbUsersComponent,
     DuckdbProductsComponent,
     DuckdbOrdersComponent,
+    DocumentationViewerComponent,
+    DuckDBCrudDemoComponent,
   ],
   template: `
     <div class="dashboard-container">
@@ -99,16 +88,20 @@ export interface NavItem {
 
         <!-- Content Area -->
         <div class="content-area" #contentArea>
-          @if (activeView() === 'demo_duckdb') {
+          @if (activeView() === 'documentation') {
+            <app-documentation-viewer></app-documentation-viewer>
+          } @else if (activeView() === 'demo_duckdb_crud') {
+            <app-duckdb-crud-demo></app-duckdb-crud-demo>
+          } @else if (activeView() === 'demo_duckdb') {
             <app-duckdb-users [items]="users()" (statsChange)="onStatsUpdate($any($event))"></app-duckdb-users>
           } @else if (activeView() === 'demo_sqlite') {
             <app-duckdb-products [items]="products()" (statsChange)="onStatsUpdate($any($event))"></app-duckdb-products>
           } @else if (activeView() === 'demo_websocket') {
             <app-duckdb-orders [items]="orders()" (statsChange)="onStatsUpdate($any($event))"></app-duckdb-orders>
           } @else {
-            <markdown 
-              [src]="currentMarkdownPath()" 
-              (load)="onMarkdownLoad($event)" 
+            <markdown
+              [src]="currentMarkdownPath()"
+              (load)="onMarkdownLoad($event)"
               (error)="onMarkdownError($event)">
             </markdown>
           }
@@ -598,35 +591,30 @@ export class DashboardComponent implements OnInit {
   isMobileView = signal(false);
   showContent = signal(false);
   
-  users = signal<any[]>([]);
-  products = signal<any[]>([]);
-  orders = signal<any[]>([]);
+  users = signal<User[]>([]);
+  products = signal<Product[]>([]);
+  orders = signal<Order[]>([]);
 
   docsOpen = signal(true);
   demoOpen = signal(true);
 
   docItems = signal<NavItem[]>([
-    { id: 'README', label: 'Overview', icon: '📖', active: true },
-    { id: 'IMPLEMENTATION_SUMMARY', label: 'Implementation', icon: '📋', active: false },
-    { id: 'REFACTORING_SUMMARY', label: 'Refactoring', icon: '♻️', active: false },
-    { id: 'TESTING', label: 'Testing', icon: '🧪', active: false },
-    { id: 'BACKEND_TESTING', label: 'Backend Tests', icon: '⚙️', active: false },
-    { id: 'DUCKDB_INTEGRATION', label: 'DuckDB Integration', icon: '🦆', active: false },
-    { id: 'DUCKDB_QUERY_BUILDER', label: 'Query Builder', icon: '🔨', active: false },
-    { id: 'DOCUMENTATION_GAP_ANALYSIS', label: 'Doc Gaps', icon: '📝', active: false },
-    { id: 'ENTERPRISE_READINESS_AUDIT', label: 'Enterprise', icon: '🏢', active: false },
+    { id: 'documentation', label: 'All Docs', icon: '📚', active: false },
+    { id: 'QUICKSTART', label: 'Quick Start', icon: '⚡', active: false },
+    { id: 'DX_SUMMARY', label: 'Developer Experience', icon: '🚀', active: false },
+    { id: 'README', label: 'Project Overview', icon: '📖', active: false },
+    { id: 'CHANGELOG', label: 'Changelog', icon: '📝', active: false },
     { id: 'backend_README', label: 'Backend', icon: '🔙', active: false },
-    { id: 'backend_di-system', label: 'DI System', icon: '📦', active: false },
     { id: 'frontend_README', label: 'Frontend', icon: '🎨', active: false },
   ]);
 
   demoItems = signal<NavItem[]>([
-    { id: 'demo_duckdb', label: 'DuckDB', icon: '🦆', active: false },
-    { id: 'demo_sqlite', label: 'SQLite', icon: '🗃️', active: false },
-    { id: 'demo_websocket', label: 'WebSocket', icon: '🔌', active: false },
-    { id: 'demo_chart', label: 'Charts', icon: '📊', active: false },
-    { id: 'demo_pdf', label: 'PDF Viewer', icon: '📄', active: false },
-    { id: 'demo_maps', label: 'Maps', icon: '🗺️', active: false },
+    { id: 'demo_duckdb_crud', label: 'DuckDB CRUD', icon: '🦆', active: false, description: 'Full CRUD operations demo' },
+    { id: 'demo_sqlite_crud', label: 'SQLite CRUD', icon: '🗃️', active: false, description: 'SQLite database demo' },
+    { id: 'demo_websocket', label: 'WebSocket', icon: '🔌', active: false, description: 'Real-time communication' },
+    { id: 'demo_duckdb', label: 'DuckDB Users', icon: '👥', active: false, description: 'User management demo' },
+    { id: 'demo_sqlite', label: 'SQLite Products', icon: '📦', active: false, description: 'Product catalog demo' },
+    { id: 'demo_websocket_alt', label: 'WebSocket Orders', icon: '📊', active: false, description: 'Live orders demo' },
   ]);
 
   currentPageTitle = signal('Overview');
@@ -659,9 +647,9 @@ export class DashboardComponent implements OnInit {
     this.isLoading.set(true);
     try {
       const [usersData, productsData, ordersData] = await Promise.all([
-        this.api.callOrThrow<any[]>('getUsers').catch(() => []),
-        this.api.callOrThrow<any[]>('getProducts').catch(() => []),
-        this.api.callOrThrow<any[]>('getOrders').catch(() => []),
+        this.api.callOrThrow<User[]>('getUsers').catch(() => []),
+        this.api.callOrThrow<Product[]>('getProducts').catch(() => []),
+        this.api.callOrThrow<Order[]>('getOrders').catch(() => []),
       ]);
       this.users.set(usersData);
       this.products.set(productsData);
@@ -670,7 +658,7 @@ export class DashboardComponent implements OnInit {
         totalUsers: usersData.length,
         totalProducts: productsData.length,
         totalOrders: ordersData.length,
-        totalRevenue: ordersData.reduce((sum: number, o: any) => sum + (o.total || 0), 0),
+        totalRevenue: ordersData.reduce((sum: number, o: Order) => sum + (o.total || 0), 0),
       });
     } catch (error) {
       this.logger.error('Failed to load data', error);
@@ -725,7 +713,7 @@ export class DashboardComponent implements OnInit {
     this.logger.error('Failed to load markdown', error);
   }
 
-  onStatsUpdate(event: { type: string; count: number }): void {
+  onStatsUpdate(event: StatsUpdateEvent): void {
     this.stats.update(s => ({ ...s, [event.type]: event.count }));
     this.loadData();
   }

@@ -1,8 +1,10 @@
 // Dependency Injection System - Errors as Values Pattern
+// Thread-safe implementation with mutex protection
 package di
 
 import "core:fmt"
 import "core:hash_map"
+import "core:sync"
 
 Token :: string
 
@@ -27,10 +29,12 @@ Injectable :: struct {
 	token: Token,
 }
 
+// Injector with thread-safe mutex
 Injector :: struct {
 	providers: hash_map.HashMap(Token, Provider),
 	instances: hash_map.HashMap(Token, rawptr),
 	parent:    ^Injector,
+	mutex:     sync.Mutex,
 }
 
 create_injector :: proc() -> (Injector, Error) {
@@ -41,6 +45,9 @@ create_injector :: proc() -> (Injector, Error) {
 }
 
 destroy_injector :: proc(inj: ^Injector) -> Error {
+	sync.lock(&inj.mutex)
+	defer sync.unlock(&inj.mutex)
+	
 	for key, val in inj.instances {
 		if val != nil {
 			delete(val)
@@ -52,6 +59,8 @@ destroy_injector :: proc(inj: ^Injector) -> Error {
 }
 
 register :: proc(inj: ^Injector, token: Token, provider: Provider) -> Error {
+	sync.lock(&inj.mutex)
+	defer sync.unlock(&inj.mutex)
 	hash_map.put(&inj.providers, token, provider)
 	return Error{code = Error_Code.None}
 }
@@ -90,6 +99,9 @@ register_factory :: proc(inj: ^Injector, token: Token, factory: Factory_Proc) ->
 }
 
 resolve :: proc(inj: ^Injector, token: Token) -> (rawptr, Error) {
+	sync.lock(&inj.mutex)
+	defer sync.unlock(&inj.mutex)
+
 	if val, ok := hash_map.get(&inj.instances, token); ok {
 		return val, Error{code = Error_Code.None}
 	}
@@ -144,6 +156,8 @@ create_instance :: proc(inj: ^Injector, provider: ^Provider) -> (rawptr, Error) 
 }
 
 has :: proc(inj: ^Injector, token: Token) -> (bool, Error) {
+	sync.lock(&inj.mutex)
+	defer sync.unlock(&inj.mutex)
 	if _, ok := hash_map.get(&inj.providers, token); ok {
 		return true, Error{code = Error_Code.None}
 	}
@@ -167,6 +181,12 @@ inject_or_create :: proc(inj: ^Injector, $T: typeid) -> (^T, Error) {
 		return cast(^T)instance, Error{code = Error_Code.None}
 	}
 
+	sync.lock(&inj.mutex)
+	defer sync.unlock(&inj.mutex)
+	// Double-check after acquiring lock
+	if val, ok := hash_map.get(&inj.instances, typeid_name(T)); ok {
+		return cast(^T)val, Error{code = Error_Code.None}
+	}
 	new_instance := new(T)
 	hash_map.put(&inj.instances, typeid_name(T), new_instance)
 	return new_instance, Error{code = Error_Code.None}

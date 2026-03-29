@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DataTableComponent, DataTableConfig } from '../shared/data-table.component';
+import { DataTableComponent } from '../shared/data-table.component';
+import { Product, DataTableConfig, StatsUpdateEvent } from '../../models';
 
 @Component({
   selector: 'app-duckdb-products',

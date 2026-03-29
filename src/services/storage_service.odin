@@ -5,6 +5,7 @@ import "core:fmt"
 import "core:os"
 import "core:encoding/json"
 import "core:hash_map"
+import "core:sync"
 import "../lib/di"
 import "../lib/errors"
 import "../lib/events"
@@ -19,6 +20,7 @@ Storage_Service :: struct {
 	logger:    ^Logger,
 	event_bus: ^events.Event_Bus,
 	modified:  bool,
+	mutex:     sync.Mutex,
 }
 
 storage_service_create :: proc(inj: ^di.Injector) -> (^Storage_Service, errors.Error) {
@@ -43,6 +45,8 @@ storage_service_create :: proc(inj: ^di.Injector) -> (^Storage_Service, errors.E
 }
 
 storage_service_load :: proc(svc: ^Storage_Service, file_path: string) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if file_path == "" {
 		return errors.err_invalid_param("File path cannot be empty")
 	}
@@ -72,6 +76,8 @@ storage_service_load :: proc(svc: ^Storage_Service, file_path: string) -> errors
 }
 
 storage_service_save :: proc(svc: ^Storage_Service) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if svc.file_path == "" {
 		return errors.err_invalid_param("No storage file path set")
 	}
@@ -95,6 +101,8 @@ storage_service_save :: proc(svc: ^Storage_Service) -> errors.Error {
 }
 
 storage_service_set :: proc(svc: ^Storage_Service, key: string, value: string) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if key == "" {
 		return errors.err_invalid_param("Storage key cannot be empty")
 	}
@@ -105,6 +113,8 @@ storage_service_set :: proc(svc: ^Storage_Service, key: string, value: string) -
 }
 
 storage_service_get :: proc(svc: ^Storage_Service, key: string) -> (string, errors.Error) {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if key == "" {
 		return "", errors.err_invalid_param("Storage key cannot be empty")
 	}
@@ -117,6 +127,8 @@ storage_service_get :: proc(svc: ^Storage_Service, key: string) -> (string, erro
 }
 
 storage_service_delete :: proc(svc: ^Storage_Service, key: string) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if key == "" {
 		return errors.err_invalid_param("Storage key cannot be empty")
 	}
@@ -132,6 +144,8 @@ storage_service_delete :: proc(svc: ^Storage_Service, key: string) -> errors.Err
 }
 
 storage_service_clear :: proc(svc: ^Storage_Service) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	hash_map.clear(&svc.data)
 	svc.modified = true
 	log_info(svc.logger, "Storage cleared")
@@ -139,6 +153,8 @@ storage_service_clear :: proc(svc: ^Storage_Service) -> errors.Error {
 }
 
 storage_service_keys :: proc(svc: ^Storage_Service) -> ([]string, errors.Error) {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	keys := make([]string, 0, hash_map.len(&svc.data))
 	for k, _ in svc.data {
 		append(&keys, k)
@@ -147,19 +163,30 @@ storage_service_keys :: proc(svc: ^Storage_Service) -> ([]string, errors.Error) 
 }
 
 storage_service_size :: proc(svc: ^Storage_Service) -> (int, errors.Error) {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	return hash_map.len(&svc.data), errors.Error{code = errors.Error_Code.None}
 }
 
 storage_service_is_modified :: proc(svc: ^Storage_Service) -> bool {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	return svc.modified
 }
 
 storage_service_destroy :: proc(svc: ^Storage_Service) -> errors.Error {
+	sync.lock(&svc.mutex)
+	defer sync.unlock(&svc.mutex)
 	if svc.modified {
+		// Unlock while saving? storage_service_save will lock again, causing deadlock.
+		// We need to unlock before calling save.
+		sync.unlock(&svc.mutex)
 		save_err := storage_service_save(svc)
 		if save_err.code != errors.Error_Code.None {
+			// Re-lock before returning? Not needed.
 			return save_err
 		}
+		sync.lock(&svc.mutex)
 	}
 	hash_map.destroy_hash_map(&svc.data)
 	delete(svc)

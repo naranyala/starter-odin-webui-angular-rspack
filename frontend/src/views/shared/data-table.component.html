@@ -1,0 +1,135 @@
+<div class="table-card">
+  <div class="card-header">
+    <div class="header-left">
+      <h2 class="card-title">
+        <span class="title-icon">{{ config?.icon || '📋' }}</span>
+        {{ config?.entityNamePlural || 'Items' }} Management
+      </h2>
+      <span class="record-count">{{ filteredItems().length }} records</span>
+    </div>
+    <div class="header-actions">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event); filterItems()"
+        />
+      </div>
+      <button class="btn btn-primary" (click)="showCreateModal()">
+        <span class="btn-icon">+</span> Add {{ config?.entityName || 'Item' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          @for (col of config?.columns || []; track col.key) {
+            <th [style.width]="col.width || 'auto'">{{ col.label }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @if (filteredItems().length === 0) {
+          <tr>
+            <td [attr.colspan]="config?.columns?.length || 1" class="empty-state">
+              No {{ config?.entityNamePlural?.toLowerCase() || 'items' }} found
+            </td>
+          </tr>
+        } @else {
+          @for (item of filteredItems(); track item; let i = $index) {
+            <tr>
+              @for (col of config?.columns || []; track col.key) {
+                <td>
+                  @if (col.type === 'actions') {
+                    <div class="action-buttons">
+                      <button class="btn btn--icon btn--edit" (click)="editItem(item)">✏️</button>
+                      <button class="btn btn--icon btn--delete" (click)="deleteItem(item)">🗑️</button>
+                    </div>
+                  } @else if (col.type === 'date') {
+                    {{ formatDateValue(item, col.key) }}
+                  } @else if (col.type === 'status') {
+                    <span class="status-badge" [class]="'status-' + getItemValue(item, col.key)">
+                      {{ getItemValue(item, col.key) }}
+                    </span>
+                  } @else {
+                    {{ getItemValue(item, col.key) }}
+                  }
+                </td>
+              }
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@if (showModal()) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ editingItem() ? 'Edit' : 'Create New' }} {{ config?.entityName || 'Item' }}</h3>
+        <button class="btn btn--icon" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form (ngSubmit)="saveItem()" #itemForm="ngForm">
+          @for (field of config?.formFields || []; track field.key) {
+            <div class="form-group">
+              <label>{{ field.label }}</label>
+              @if (field.type === 'select') {
+                <select
+                  [ngModel]="formData()[field.key]"
+                  (ngModelChange)="updateFormData(field.key, $event)"
+                  [name]="field.key"
+                  class="form-control"
+                  required
+                >
+                  @for (option of field.options || []; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              } @else if (field.type === 'date') {
+                <input
+                  type="date"
+                  [ngModel]="formData()[field.key]"
+                  (ngModelChange)="updateFormData(field.key, $event)"
+                  [name]="field.key"
+                  class="form-control"
+                />
+              } @else if (field.type === 'number') {
+                <input
+                  type="number"
+                  [ngModel]="formData()[field.key]"
+                  (ngModelChange)="updateFormData(field.key, $event)"
+                  [name]="field.key"
+                  class="form-control"
+                  required
+                />
+              } @else {
+                <input
+                  type="text"
+                  [ngModel]="formData()[field.key]"
+                  (ngModelChange)="updateFormData(field.key, $event)"
+                  [name]="field.key"
+                  class="form-control"
+                  required
+                />
+              }
+            </div>
+          }
+          <div class="modal-actions">
+            <button type="button" class="btn btn--secondary" (click)="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn--primary" [disabled]="itemForm.invalid || isLoading()">
+              {{ isLoading() ? 'Saving...' : (editingItem() ? 'Update' : 'Create') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}

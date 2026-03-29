@@ -3,6 +3,7 @@ package services
 
 import "core:fmt"
 import "core:hash_map"
+import "core:sync"
 import "../lib/di"
 import "../lib/errors"
 import "../lib/events"
@@ -12,11 +13,14 @@ Service_Registry :: struct {
 	event_bus:  events.Event_Bus,
 	logger:     ^Logger,
 	registered: hash_map.HashMap(string, bool),
+	mutex:      sync.Mutex,
 }
 
 registry: Service_Registry
 
 registry_init :: proc() -> errors.Error {
+	sync.lock(&registry.mutex)
+	defer sync.unlock(&registry.mutex)
 	inj, err := di.create_injector()
 	if err.code != errors.Error_Code.None {
 		return err
@@ -49,6 +53,8 @@ registry_init :: proc() -> errors.Error {
 }
 
 registry_register_singleton :: proc(name: string, factory: di.Factory_Proc) -> errors.Error {
+	sync.lock(&registry.mutex)
+	defer sync.unlock(&registry.mutex)
 	if name == "" {
 		return errors.err_invalid_param("Service name cannot be empty")
 	}
@@ -65,10 +71,14 @@ registry_register_singleton :: proc(name: string, factory: di.Factory_Proc) -> e
 }
 
 registry_get :: proc($T: typeid) -> (^T, errors.Error) {
+	sync.lock(&registry.mutex)
+	defer sync.unlock(&registry.mutex)
 	return di.inject(&registry.injector, T)
 }
 
 registry_get_by_name :: proc(name: string) -> (rawptr, errors.Error) {
+	sync.lock(&registry.mutex)
+	defer sync.unlock(&registry.mutex)
 	if name == "" {
 		return nil, errors.err_invalid_param("Service name cannot be empty")
 	}
@@ -76,6 +86,8 @@ registry_get_by_name :: proc(name: string) -> (rawptr, errors.Error) {
 }
 
 registry_has :: proc(name: string) -> (bool, errors.Error) {
+	sync.lock(&registry.mutex)
+	defer sync.unlock(&registry.mutex)
 	if name == "" {
 		return false, errors.err_invalid_param("Service name cannot be empty")
 	}

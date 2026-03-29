@@ -1,16 +1,35 @@
 # Odin WebUI Angular Rspack
 
-A full-stack desktop application framework combining **Odin** backend, **Angular** frontend with **Rspack** bundler, and **WebUI** bridge for seamless bidirectional communication.
+A full-stack desktop application framework combining Odin backend, Angular frontend with Rspack bundler, and WebUI bridge for seamless bidirectional communication.
+
+## Quick Start
+
+```bash
+# Install dependencies
+make install
+
+# Start development server
+make dev
+
+# Open http://localhost:4200
+```
+
+For detailed setup instructions, see [QUICKSTART.md](QUICKSTART.md).
+
+---
 
 ## Table of Contents
 
+- [Quick Start](#quick-start)
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
-- [Communication Methods](#communication-methods)
+- [Technology Stack](#technology-stack)
+- [Features](#features)
 - [Getting Started](#getting-started)
 - [Build System](#build-system)
-- [Critics and Suggestions](#critics-and-suggestions)
+- [Documentation](#documentation)
+- [Development](#development)
 - [Version Information](#version-information)
 
 ---
@@ -28,260 +47,175 @@ This project demonstrates a modern desktop application architecture featuring:
 
 ### Key Features
 
-- **High Performance**: Odin backend with native code execution
-- **Reactive UI**: Angular signals for state management
-- **Multiple IPC Patterns**: RPC, Events, Channels, Message Queue
-- **Dependency Injection**: Angular-inspired DI system in Odin
-- **Dark Theme**: Modern dark gray UI design
+- High Performance: Odin backend with native code execution
+- Reactive UI: Angular signals for state management
+- Multiple IPC Patterns: RPC, Events, Channels, Message Queue
+- Dependency Injection: Angular-inspired DI system in Odin
+- Dark Theme: Modern dark gray UI design
+- CRUD-Ready Demos: Full database operation examples
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Angular Frontend                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
-│  │ Components  │  │   Services  │  │  Communication Service  │  │
-│  │  (Views)    │  │ (Business)  │  │  - RPC Client          │  │
-│  │             │  │             │  │  - Event Bus           │  │
-│  └─────────────┘  └─────────────┘  │  - Channels            │  │
-│                                    │  - Message Queue        │  │
-│                                    └───────────┬─────────────┘  │
-└───────────────────────────────────────────────┼───────────────────┘
-                                                │
-                                    WebSocket (ws://)
-                                                │
-┌───────────────────────────────────────────────┼───────────────────┐
-│                      WebUI Library                              │
-│  ┌─────────────────┐  ┌─────────────────────────────────────┐  │
-│  │  Civetweb WS    │  │  JavaScript Bridge (webui.js)        │  │
-│  │  Server         │  │  - call(function, ...args)            │  │
-│  │                 │  │  - emit(event, data)                 │  │
-│  └────────┬────────┘  └─────────────────────────────────────┘  │
-│           │                                                    │
-│           │ FFI (Foreign Function Interface)                    │
-└───────────┼────────────────────────────────────────────────────┘
-            │
-┌───────────┼────────────────────────────────────────────────────┐
-│           ▼            Odin Backend                            │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                    Services Layer                            ││
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────────────┐   ││
-│  │  │ Logger  │ │  User   │ │  Auth   │ │  HTTP Service   │   ││
-│  │  └─────────┘ └─────────┘ └─────────┘ └─────────────────┘   ││
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────────────┐   ││
-│  │  │ Storage │ │  Cache  │ │Registry │ │  Notification   │   ││
-│  │  └─────────┘ └─────────┘ └─────────┘ └─────────────────┘   ││
-│  └─────────────────────────────────────────────────────────────┘│
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                   Core Infrastructure                        ││
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐  ││
-│  │  │    DI    │ │  Events  │ │  Errors  │ │  Utilities   │  ││
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────────┘  ││
-│  └─────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------------+
+|                      Angular Frontend                             |
+|  +----------------+  +----------------+  +---------------------+  |
+|  |  Components    |  |   Services     |  | Communication Svc   |  |
+|  |  (Views)       |  | (Business)     |  | - RPC Client        |  |
+|  |                |  |                |  | - Event Bus         |  |
+|  +----------------+  +----------------+  | - Channels          |  |
+|                                          | - Message Queue     |  |
+|                                          +----------+----------+  |
++------------------------------------------------------------------+
+                                                   |
+                                       WebSocket (ws://)
+                                                   |
++------------------------------------------------------------------+
+|                      WebUI Library                               |
+|  +-----------------+  +---------------------------------------+  |
+|  |  Civetweb WS    |  |  JavaScript Bridge (webui.js)         |  |
+|  |  Server         |  |  - call(function, ...args)            |  |
+|  |                 |  |  - emit(event, data)                  |  |
+|  +--------+--------+  +---------------------------------------+  |
+|           |                                                     |
+|           | FFI (Foreign Function Interface)                    |
++-----------+-----------------------------------------------------+
+            |
++-----------+-----------------------------------------------------+
+            v            Odin Backend                             |
++------------------------------------------------------------------+
+|                    Services Layer                                |
+|  +-----------+ +-----------+ +-----------+ +-----------------+   |
+|  |  Logger   | |   User    | |   Auth    | |  HTTP Service   |   |
+|  +-----------+ +-----------+ +-----------+ +-----------------+   |
+|  +-----------+ +-----------+ +-----------+ +-----------------+   |
+|  |  Storage  | |   Cache   | | Registry  | |  Notification   |   |
+|  +-----------+ +-----------+ +-----------+ +-----------------+   |
++------------------------------------------------------------------+
+|                 Core Infrastructure                              |
+|  +------------+ +------------+ +------------+ +--------------+   |
+|  |     DI     | |   Events   | |   Errors   | |  Utilities   |   |
+|  +------------+ +------------+ +------------+ +--------------+   |
++------------------------------------------------------------------+
 ```
 
 ---
 
 ## Project Structure
 
-### Root Directory
-
 ```
 starter-odin-webui-angular-rspack/
-├── main.odin                    # Main application entry
-├── webui_lib/                   # WebUI Odin bindings
-├── src/                         # Backend source code
-├── frontend/                    # Angular frontend
-├── thirdparty/                  # External dependencies
-├── lib/                         # Shared libraries
-├── utils/                       # Utility functions
-├── comms/                       # Communication layer
-├── errors/                      # Error handling
-├── di/                          # Dependency injection
-├── build/                       # Build output
-└── run.sh                       # Build script
-```
-
-### Backend (Odin) Structure
-
-```
-src/
-├── lib/
-│   ├── di/
-│   │   └── injector.odin          # Dependency injection container
-│   ├── errors/
-│   │   └── errors.odin            # Error types and handling
-│   ├── events/
-│   │   ├── event_bus.odin         # Type-safe event bus
-│   │   └── handlers.odin           # Event handlers
-│   ├── comms/
-│   │   └── comms.odin              # Communication primitives
-│   ├── webui_lib/
-│   │   └── webui.odin             # WebUI FFI bindings
-│   └── utils/
-│       ├── logger.odin            # Structured logging
-│       ├── config.odin           # Configuration management
-│       ├── file_system.odin       # File operations
-│       ├── clipboard.odin          # Clipboard access
-│       ├── dialogs.odin           # System dialogs
-│       ├── system.odin             # System info
-│       ├── process.odin            # Process management
-│       └── window_utils.odin      # Window utilities
+├── frontend/                    # Angular frontend (primary)
+│   ├── src/
+│   │   ├── core/               # Core services
+│   │   ├── app/                # App services
+│   │   ├── views/              # Components and views
+│   │   ├── models/             # Type definitions
+│   │   └── documentation/      # Documentation viewer
+│   ├── tests/                  # E2E tests
+│   └── docs/                   # Frontend documentation
 │
-├── services/
-│   ├── logger.odin               # Logging service
-│   ├── user_service.odin         # User management
-│   ├── auth_service.odin        # Authentication
-│   ├── cache_service.odin       # In-memory cache with TTL
-│   ├── storage_service.odin     # Persistent JSON storage
-│   ├── http_service.odin        # HTTP client
-│   ├── notification_service.odin # System notifications
-│   ├── registry.odin            # Service registry
-│   └── services.odin             # Service exports
+├── src/                        # Odin backend
+│   ├── core/                   # Main entry point
+│   ├── lib/                    # Core libraries
+│   │   ├── di/                 # Dependency injection
+│   │   ├── errors/             # Error handling
+│   │   ├── events/             # Event bus
+│   │   └── utils/              # Utilities
+│   ├── services/               # Business logic
+│   ├── handlers/               # WebUI handlers
+│   └── models/                 # Data models
 │
-└── models/
-    └── models.odin              # Data models
-```
-
-### Frontend (Angular) Structure
-
-```
-frontend/src/
-├── app/
-│   └── services/
-│       └── communication.service.ts  # IPC abstraction layer
+├── build/                      # Build output
+├── docs/                       # Consolidated documentation
+│   ├── backend/                # Backend docs
+│   ├── frontend/               # Frontend docs
+│   ├── guides/                 # User guides
+│   └── architecture/           # Architecture docs
 │
-├── core/
-│   ├── api.service.ts             # Backend API service
-│   ├── webui/
-│   │   ├── index.ts              # WebUI module exports
-│   │   ├── webui.service.ts     # WebUI integration
-│   │   └── webui-demo.component.ts
-│   ├── winbox.service.ts         # WinBox window management
-│   ├── logger.service.ts         # Client-side logging
-│   ├── theme.service.ts          # Theme management
-│   ├── storage.service.ts        # Local storage wrapper
-│   ├── http.service.ts          # HTTP client wrapper
-│   ├── clipboard.service.ts       # Clipboard operations
-│   ├── notification.service.ts    # Browser notifications
-│   ├── network-monitor.service.ts
-│   ├── loading.service.ts        # Loading state management
-│   ├── global-error.service.ts   # Global error handler
-│   ├── devtools.service.ts       # DevTools integration
-│   ├── lucide-icons.provider.ts  # Icon provider
-│   └── *.test.ts                 # Unit tests
+├── lib/                        # Native libraries
+├── tests/                      # Backend tests
+├── examples/                   # Example code
+├── audit/                      # Code audit findings
 │
-├── views/
-│   ├── app.component.ts           # Main app component
-│   ├── app.component.html         # Main app template
-│   ├── app.component.css          # Main app styles
-│   ├── home/
-│   ├── auth/
-│   ├── devtools/
-│   ├── sqlite/
-│   └── shared/
-│
-├── models/
-│   ├── card.model.ts
-│   ├── log.model.ts
-│   └── window.model.ts
-│
-├── types/
-│   └── error.types.ts
-│
-├── environments/
-│   └── environment.ts
-│
-├── integration/
-│   └── *.test.ts                 # Integration tests
-│
-├── main.ts                       # Bootstrap
-├── index.html                    # HTML entry
-├── styles.css                    # Global styles
-└── winbox-loader.ts              # WinBox script loader
-```
-
-### Communication Layer
-
-```
-Frontend IPC Services:
-├── RpcClientService          # Request-response calls
-├── EventBusService           # Pub/sub events
-├── ChannelService            # Full-duplex channels
-├── MessageQueueService       # Async message queuing
-└── BinaryProtocolService     # Binary encoding/decoding
-
-Backend Communication:
-├── RPC Handler               # JSON-RPC style calls
-├── Event Bus                # Type-safe event system
-├── Channel Manager          # Channel state management
-└── WebUI Bindings           # Native FFI calls
+├── Makefile                    # Build automation
+├── run.sh                      # Build/run script
+├── README.md                   # This file
+├── QUICKSTART.md               # Quick setup guide
+├── CHANGELOG.md                # Version history
+└── ARCHITECTURAL_DECISIONS.md  # Architecture decisions
 ```
 
 ---
 
-## Communication Methods
+## Technology Stack
 
-### 1. WebSocket (Primary - No HTTP)
+### Backend
 
-```
-Angular <--WebSocket--> WebUI/Civetweb <--FFI--> Odin
-```
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Odin | dev-2025-04+ | System programming language |
+| WebUI | 2.5.0-beta.4 | Browser UI bridge |
+| Civetweb | 1.17 | Embedded WebSocket server |
 
-**Port**: Auto-assigned or configurable via `webui_set_port()`
+### Frontend
 
-**Security**: TLS supported via `webui-2-secure` variant (wss://)
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Angular | 21.1.5 | UI framework |
+| Rspack | 1.7.6 | Rust-based bundler |
+| Bun | 1.3+ | Package manager/runtime |
+| Biome | 2.4.2 | Linter/formatter |
+| Playwright | 1.42.0 | E2E testing |
+| ngx-markdown | 21.1.0 | Markdown rendering |
+| Lucide Angular | 0.577.0 | Icon library |
 
-### 2. RPC (Request-Response)
+### Development Tools
 
-**Frontend:**
-```typescript
-const result = await webui.call('functionName', arg1, arg2);
-```
+| Tool | Purpose |
+|------|---------|
+| Make | Build automation |
+| Biome | Linting and formatting |
+| Playwright | E2E testing |
+| Rspack | Fast bundling with HMR |
 
-**Backend:**
-```odin
-my_handler :: proc "c" (e: ^webui.Event) {
-    data := webui.get_string(e)
-    webui.return_string(e, "response")
-}
-```
+---
 
-### 3. Event Bus (Pub/Sub)
+## Features
 
-**Frontend:**
-```typescript
-webui.on('event:name', (data) => { /* handle */ });
-```
+### Core Features
 
-**Backend:**
-```odin
-events.emit(&bus, .User_Joined, data)
-```
+- **Full-Stack Architecture**: Odin backend with Angular frontend
+- **WebSocket Communication**: Bidirectional IPC via WebUI bridge
+- **Dependency Injection**: Type-safe DI in both frontend and backend
+- **Event-Driven**: Pub/sub event bus for decoupled communication
+- **Thread-Safe**: Mutex-protected operations in backend services
 
-### 4. Direct Binding
+### Frontend Features
 
-**HTML:**
-```html
-<button id="myBtn">Click</button>
-```
+- **Signal-Based State**: Modern Angular signals for reactive state
+- **Documentation Viewer**: Built-in markdown documentation system
+- **CRUD-Ready Demos**: Full database operation examples
+- **Dark Theme**: Professional dark gray UI design
+- **Responsive Design**: Mobile-first with adaptive layouts
 
-**Backend:**
-```odin
-webui.bind(window, "myBtn", my_callback)
-```
+### Backend Features
 
-### 5. Binary Protocol
+- **Error Handling**: Errors as values pattern (no exceptions)
+- **Service Architecture**: Modular service-based design
+- **In-Memory Storage**: Hash map-based data storage
+- **Session Management**: Token-based authentication
+- **Logging**: Structured logging with levels
 
-Custom binary encoding with header format:
-- Magic: `0xABCD`
-- Version: `1 byte`
-- Message type: `1 byte`
-- Length: `4 bytes (little-endian)`
-- Payload: `variable`
+### Demo Features
+
+- **DuckDB CRUD**: Full Create, Read, Update, Delete operations
+- **SQLite Integration**: Database persistence examples
+- **WebSocket Demo**: Real-time communication examples
+- **Data Tables**: Reusable data table components
+- **Query Builder**: SQL query execution with results viewer
 
 ---
 
@@ -302,42 +236,26 @@ Custom binary encoding with header format:
 git clone <repo-url>
 cd starter-odin-webui-angular-rspack
 
-# Install frontend dependencies
-cd frontend
-bun install
-cd ..
+# Install dependencies
+make install
+
+# Start development
+make dev
 ```
 
-### Build and Run
+### Build Commands
 
 ```bash
-# Full build and run
-./run.sh
-
-# Build only
-./run.sh --build
-
-# Run only (after build)
-./run.sh --run
-
-# Show help
-./run.sh --help
+make install     # Install all dependencies
+make dev         # Start development server
+make build       # Build everything
+make test        # Run all tests
+make clean       # Clean build artifacts
+make lint        # Lint and fix issues
+make metrics     # Show project statistics
 ```
 
-### Frontend Development
-
-```bash
-cd frontend
-
-# Development server with hot reload
-bun run dev
-
-# Production build
-bun run build:rspack
-
-# Run tests
-bun test
-```
+For detailed commands, see the [Makefile](Makefile).
 
 ---
 
@@ -346,29 +264,29 @@ bun test
 ### Build Flow
 
 ```
-┌─────────────────┐
-│  Frontend Build  │  bun + rspack
-└────────┬────────┘
-         │ frontend/dist/
-         ▼
-┌─────────────────┐
-│   Copy Assets   │  copy to build/
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Odin Build    │  odin build
-└────────┬────────┘
-         │ build/app
-         ▼
-┌─────────────────┐
-│ Copy WebUI Lib  │  libwebui-2.so
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Run App       │  LD_LIBRARY_PATH
-└─────────────────┘
++------------------+
+|  Frontend Build  |  bun + rspack
++--------+---------+
+         | frontend/dist/
+         v
++------------------+
+|   Copy Assets    |  copy to build/
++--------+---------+
+         |
+         v
++------------------+
+|   Odin Build     |  odin build
++--------+---------+
+         | build/app
+         v
++------------------+
+| Copy WebUI Lib   |  libwebui-2.so
++--------+---------+
+         |
+         v
++------------------+
+|   Run App        |  LD_LIBRARY_PATH
++------------------+
 ```
 
 ### Output Directories
@@ -378,156 +296,89 @@ bun test
 
 ---
 
-## Critics and Suggestions
+## Documentation
 
-### Strengths
+### Quick References
 
-1. **Clean Architecture**: Clear separation between frontend, bridge, and backend
-2. **Multiple IPC Patterns**: Flexibility to choose appropriate communication method
-3. **Type Safety**: Odin provides memory safety, Angular provides runtime type checking
-4. **Performance**: Native Odin backend with WebSocket bridge is lightweight
-5. **Modern UI**: Dark theme with Angular signals for reactive updates
+| Document | Purpose |
+|----------|---------|
+| [QUICKSTART.md](QUICKSTART.md) | 5-minute setup guide |
+| [DX_SUMMARY.md](DX_SUMMARY.md) | Developer experience summary |
+| [DX_IMPROVEMENT_PLAN.md](DX_IMPROVEMENT_PLAN.md) | DX improvement roadmap |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md) | Architecture decisions |
 
-### Weaknesses and Suggestions
+### Full Documentation
 
-#### 1. **Duplicate Code Structure**
+Located in `docs/` directory:
 
-**Problem**: Backend code exists in multiple locations:
-- `src/`
-- `utils/`
-- `comms/`
-- `errors/`
-- `di/`
+- `docs/backend/` - Backend documentation
+- `docs/frontend/` - Frontend documentation
+- `docs/guides/` - User guides and tutorials
+- `docs/architecture/` - Architecture documentation
 
-**Suggestion**: Consolidate into single `src/` structure or use a unified module system.
+### In-App Documentation
 
-```odin
-// Proposed structure
-src/
-├── core/           # DI, Events, Errors, Utils
-├── services/       # Business logic
-└── main.odin
+Access documentation directly in the application:
+1. Open Dashboard
+2. Click "All Docs" in Documentation section
+3. Browse sections and topics
+
+---
+
+## Development
+
+### Project Status
+
+| Metric | Status | Notes |
+|--------|--------|-------|
+| Build | Passing | ~18 seconds |
+| Bundle Size | 920 KB | Initial total |
+| Test Coverage | Moderate | E2E + unit tests |
+| Documentation | Complete | In-app + markdown |
+
+### Recent Changes
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+**Latest Release (Unreleased)**
+- Frontend consolidation (merged alt88/alt99 features)
+- Documentation system integration
+- CRUD-ready demo components
+- Thread-safe DI implementation
+- Enhanced build script with verification
+
+### Known Issues
+
+See `audit/open/` directory for open audit findings.
+
+### Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+---
+
+## Testing
+
+### Frontend Tests
+
+```bash
+# Unit tests
+cd frontend && bun test
+
+# E2E tests
+cd frontend && bunx playwright test
+
+# With coverage
+cd frontend && bun test --coverage
 ```
 
-#### 2. **Incomplete WebUI Bindings**
+### Backend Tests
 
-**Problem**: Only subset of WebUI API is bound:
-- Missing: `webui_script()`, `webui_set_profile()`, `webui_set_proxy()`
-
-**Suggestion**: Complete the bindings or document available APIs clearly.
-
-```odin
-// Missing bindings to add:
-webui_script        :: proc(win: c.size_t, script: cstring, timeout: c.uint, buffer: [^]u8, buffer_len: c.size_t) -> bool ---
-webui_set_profile   :: proc(win: c.size_t, name: cstring, path: cstring) ---
+```bash
+cd tests && odin build *.odin
+./di_test
 ```
-
-#### 3. **No Type-Safe IPC Protocol**
-
-**Problem**: Current RPC uses string function names, prone to typos.
-
-**Suggestion**: Generate typed bindings from shared schema.
-
-```typescript
-// Current (error-prone)
-webui.call('user.authenticate', creds)
-
-// Proposed (type-safe)
-import { backend } from './generated/api';
-backend.user.authenticate(creds);
-```
-
-#### 4. **Missing Error Handling Patterns**
-
-**Problem**: Inconsistent error propagation between services.
-
-**Suggestion**: Standardize error handling with Result type pattern.
-
-```odin
-Result :: struct($T: typeid) {
-    value: Maybe(T),
-    error: Maybe(Error),
-}
-
-authenticate :: proc(creds: Credentials) -> Result(User) {
-    // Return typed result
-}
-```
-
-#### 5. **Test Coverage Gaps**
-
-**Problem**: Many tests fail or are missing browser mocks.
-
-**Suggestion**: 
-- Use proper mocking libraries (Jest with jsdom)
-- Separate unit tests from integration tests
-- Add E2E tests with Playwright/Cypress
-
-#### 6. **Configuration Management**
-
-**Problem**: Hardcoded values scattered across code.
-
-**Suggestion**: Centralize configuration.
-
-```odin
-// config.odin
-Config :: struct {
-    webui_port: u16,
-    log_level: Log_Level,
-    storage_path: string,
-}
-
-default_config :: Config {
-    .webui_port = 0,  // Auto
-    .log_level = .Info,
-    .storage_path = "./data",
-}
-```
-
-#### 7. **Security Considerations**
-
-**Missing**:
-- No HTTPS/WSS by default
-- No authentication middleware
-- No input validation on IPC boundaries
-
-**Suggestions**:
-```odin
-// Enable TLS
-webui_set_tls_certificate(win, cert_path, key_path)
-
-// Add authentication middleware
-@middleware(auth_required)
-handle_sensitive_data :: proc(e: ^webui.Event) {
-    // Validate token before processing
-}
-```
-
-#### 8. **Documentation Gaps**
-
-**Missing**:
-- API documentation for services
-- Deployment guide
-- Troubleshooting section
-- Migration guide
-
-#### 9. **Build System Complexity**
-
-**Problem**: `run.sh` script is custom, not using standard tools.
-
-**Suggestion**: Consider using:
-- `just` command runner
-- Task automation with `task` (Go)
-- Or proper Makefile
-
-#### 10. **Frontend State Management**
-
-**Current**: Component-level signals
-
-**Suggestion for scale**: Consider adding:
-- NgRx for global state
-- TanStack Query for server state
-- Router for navigation
 
 ---
 
@@ -540,7 +391,6 @@ handle_sensitive_data :: proc(e: ^webui.Event) {
 | Odin | dev-2025-04+ | Cutting Edge |
 | Angular | 21.1.5 | Latest |
 | Rspack | 1.7.6 | Stable |
-| Lucide | (via lucide-angular) | Latest |
 
 ---
 
@@ -550,16 +400,14 @@ MIT License - See LICENSE file for details.
 
 ---
 
-## Contributing
+## Support
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Ensure tests pass
-5. Submit a pull request
+- **Documentation**: `docs/` directory or in-app viewer
+- **Issues**: Check `audit/open/` for known issues
+- **Architecture**: See `ARCHITECTURAL_DECISIONS.md`
 
-### Code Style
+---
 
-- Odin: Follow `core:fmt` conventions
-- TypeScript: Follow Angular style guide
-- CSS: BEM naming convention
+**Last Updated:** 2026-03-29
+**Build Status:** Passing
+**Development Status:** Active

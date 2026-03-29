@@ -16,3 +16,12 @@ export { WinBoxService } from './winbox.service';
 
 // WebUI
 export { WebUIBridgeService } from './webui/webui-bridge.service';
+
+// Additional Services (merged from frontend-alt99)
+export { ClipboardService } from './clipboard.service';
+export { LoadingService, LoadingState, LoadingConfig } from './loading.service';
+export { NetworkMonitorService, NetworkStatus } from './network-monitor.service';
+export { GlobalErrorService, GlobalErrorState } from './global-error.service';
+
+// Icons
+export { provideLucideIcons } from './lucide-icons.provider';

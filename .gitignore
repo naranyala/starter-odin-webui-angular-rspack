@@ -1,15 +1,157 @@
-
+# =============================================================================
+# Node.js / Frontend
+# =============================================================================
 frontend/node_modules/
-frontend/dist
-frontend/.angular
+frontend/dist/
+frontend/.angular/
+frontend/.rspack_cache/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
 
-frontend-legacy/node_modules/
-frontend-legacy/dist
-frontend-legacy/.angular
+frontend-alt88/node_modules/
+frontend-alt88/dist/
+frontend-alt88/.angular/
+frontend-alt88/.rspack_cache/
 
-*/node_modules/*
+frontend-alt99/node_modules/
+frontend-alt99/dist/
+frontend-alt99/.angular/
+frontend-alt99/.rspack_cache/
 
-dist/
+# All node_modules (catch-all)
+**/node_modules/
+
+# =============================================================================
+# Build Output
+# =============================================================================
 build/
+dist/
+**/dist/
+**/build/
 
+# Compiled binaries (now in build/)
+*.bin
+*.exe
+*.so
+*.a
+*.dylib
+
+# Odin build artifacts
+*.o
+*.obj
+*.ll
+*.bc
+
+# =============================================================================
+# Third Party
+# =============================================================================
 thirdparty/*
+!thirdparty/.gitkeep
+
+# =============================================================================
+# IDE and Editor Files
+# =============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# =============================================================================
+# OS Files
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# =============================================================================
+# Logs and Databases
+# =============================================================================
+*.log
+logs/
+*.sqlite
+*.db
+*.duckdb
+
+# =============================================================================
+# Environment Files
+# =============================================================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# =============================================================================
+# Testing
+# =============================================================================
+coverage/
+.nyc_output/
+playwright-report/
+playwright/.cache/
+test-results/
+*.lcov
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+tmp/
+temp/
+.tmp/
+.temp/
+*.tmp
+*.temp
+
+# =============================================================================
+# Debug Files
+# =============================================================================
+*.pdb
+*.dll
+*.dylib.dSYM
+
+# =============================================================================
+# Cache Directories
+# =============================================================================
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# =============================================================================
+# Qwen IDE
+# =============================================================================
+.qwen/
+
+# =============================================================================
+# Audit (keep open/closed but ignore specific findings)
+# =============================================================================
+audit/open/*.md
+audit/closed/*.md
+!audit/open/00_SUMMARY.md
+!audit/closed/00_SUMMARY.md
+
+# =============================================================================
+# Documentation Duplicates (keep only /docs/)
+# =============================================================================
+frontend/docs/
+frontend-alt88/docs/
+frontend-alt99/docs/
+
+# =============================================================================
+# Alternative Frontends (marked for removal)
+# =============================================================================
+frontend-alt88/
+frontend-alt99/

@@ -11,6 +11,12 @@ export * from './data-transform.types';
 export * from './data-transform.services';
 export * from './data-transform.services2';
 
+// Array Transform Service
+export { ArrayTransformService } from './array-transform.service';
+
+// Encoding Service
+export { EncodingService } from './encoding.service';
+
 // Validation Service (only the class, types already exported)
 export { ValidationService } from './validation.service';
 
