@@ -1,0 +1,141 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-03-30T19:52:48.210Z",
+  "sections": [
+    {
+      "id": "quickstart",
+      "title": "Quick Start",
+      "icon": "🚀",
+      "order": 1,
+      "items": [
+        {
+          "id": "readme",
+          "title": "README",
+          "path": "assets/docs/README.md",
+          "category": "quickstart",
+          "order": 1
+        },
+        {
+          "id": "quickstart",
+          "title": "QUICKSTART",
+          "path": "assets/docs/QUICKSTART.md",
+          "category": "quickstart",
+          "order": 2
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "Architecture",
+      "icon": "🏗️",
+      "order": 2,
+      "items": [
+        {
+          "id": "architectural_decisions",
+          "title": "ARCHITECTURAL_DECISIONS",
+          "path": "assets/docs/ARCHITECTURAL_DECISIONS.md",
+          "category": "architecture",
+          "order": 1
+        },
+        {
+          "id": "changelog",
+          "title": "CHANGELOG",
+          "path": "assets/docs/CHANGELOG.md",
+          "category": "architecture",
+          "order": 2
+        }
+      ]
+    },
+    {
+      "id": "backend",
+      "title": "Backend",
+      "icon": "🔙",
+      "order": 3,
+      "items": [
+        {
+          "id": "readme",
+          "title": "README",
+          "path": "assets/docs/backend/README.md",
+          "category": "backend",
+          "order": 1
+        },
+        {
+          "id": "di-system",
+          "title": "Di System",
+          "path": "assets/docs/backend/di-system.md",
+          "category": "backend",
+          "order": 2
+        },
+        {
+          "id": "duckdb-integration",
+          "title": "Duckdb Integration",
+          "path": "assets/docs/backend/duckdb-integration.md",
+          "category": "backend",
+          "order": 3
+        },
+        {
+          "id": "sqlite-integration",
+          "title": "Sqlite Integration",
+          "path": "assets/docs/backend/sqlite-integration.md",
+          "category": "backend",
+          "order": 4
+        }
+      ]
+    },
+    {
+      "id": "frontend",
+      "title": "Frontend",
+      "icon": "🎨",
+      "order": 4,
+      "items": [
+        {
+          "id": "readme",
+          "title": "README",
+          "path": "assets/docs/frontend/README.md",
+          "category": "frontend",
+          "order": 1
+        },
+        {
+          "id": "duckdb-components",
+          "title": "Duckdb Components",
+          "path": "assets/docs/frontend/duckdb-components.md",
+          "category": "frontend",
+          "order": 2
+        },
+        {
+          "id": "sqlite-components",
+          "title": "Sqlite Components",
+          "path": "assets/docs/frontend/sqlite-components.md",
+          "category": "frontend",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "id": "guides",
+      "title": "Guides",
+      "icon": "📚",
+      "order": 5,
+      "items": [
+        {
+          "id": "readme",
+          "title": "README",
+          "path": "assets/docs/guides/README.md",
+          "category": "guides",
+          "order": 1
+        },
+        {
+          "id": "crud-operations-guide",
+          "title": "Crud Operations Guide",
+          "path": "assets/docs/guides/crud-operations-guide.md",
+          "category": "guides",
+          "order": 2
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "totalSections": 5,
+    "totalItems": 13
+  }
+}

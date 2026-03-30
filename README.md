@@ -1,6 +1,6 @@
-# Odin WebUI Angular Rspack
+# Odin WebUI Angular Rspack - Production Database Integration
 
-A full-stack desktop application framework combining Odin backend, Angular frontend with Rspack bundler, and WebUI bridge for seamless bidirectional communication.
+A full-stack desktop application framework combining Odin backend, Angular 21 frontend with Rspack bundler, and WebUI bridge for seamless bidirectional communication. Features production-ready DuckDB and SQLite database integration with complete CRUD operations.
 
 ## Quick Start
 
@@ -14,45 +14,44 @@ make dev
 # Open http://localhost:4200
 ```
 
-For detailed setup instructions, see [QUICKSTART.md](QUICKSTART.md).
+For detailed setup instructions, see QUICKSTART.md.
 
 ---
 
 ## Table of Contents
 
-- [Quick Start](#quick-start)
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Project Structure](#project-structure)
-- [Technology Stack](#technology-stack)
-- [Features](#features)
-- [Getting Started](#getting-started)
-- [Build System](#build-system)
-- [Documentation](#documentation)
-- [Development](#development)
-- [Version Information](#version-information)
+- Quick Start
+- Overview
+- Architecture
+- Database Options
+- Technology Stack
+- Getting Started
+- Documentation
+- Development
 
 ---
 
 ## Overview
 
-This project demonstrates a modern desktop application architecture featuring:
+This project provides a production-ready full-stack application architecture with dual database support:
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
 | Backend | Odin | High-performance system programming |
+| Database | DuckDB / SQLite | Analytical and transactional data storage |
 | Bridge | WebUI | Bidirectional IPC via WebSocket |
-| Frontend | Angular 21 | Reactive UI framework |
+| Frontend | Angular 21 | Reactive UI framework with CRUD components |
 | Bundler | Rspack | Fast web application bundler |
 
 ### Key Features
 
-- High Performance: Odin backend with native code execution
-- Reactive UI: Angular signals for state management
-- Multiple IPC Patterns: RPC, Events, Channels, Message Queue
-- Dependency Injection: Angular-inspired DI system in Odin
-- Dark Theme: Modern dark gray UI design
-- CRUD-Ready Demos: Full database operation examples
+- Dual Database Support: DuckDB for analytics, SQLite for transactions
+- Complete CRUD Operations: Create, Read, Update, Delete for both databases
+- Real-time Updates: WebSocket-based live data synchronization
+- Query Builder: Visual SQL query construction and execution
+- Type-Safe: End-to-end TypeScript and Odin type consistency
+- Thread-Safe: Mutex-protected backend operations
+- Data Visualization: Vega-Lite charts for analytics
 
 ---
 
@@ -62,12 +61,12 @@ This project demonstrates a modern desktop application architecture featuring:
 +------------------------------------------------------------------+
 |                      Angular Frontend                             |
 |  +----------------+  +----------------+  +---------------------+  |
-|  |  Components    |  |   Services     |  | Communication Svc   |  |
-|  |  (Views)       |  | (Business)     |  | - RPC Client        |  |
-|  |                |  |                |  | - Event Bus         |  |
-|  +----------------+  +----------------+  | - Channels          |  |
-|                                          | - Message Queue     |  |
-|                                          +----------+----------+  |
+|  |  CRUD          |  |   Database     |  | Communication Svc   |  |
+|  |  Components    |  |   Services     |  | - RPC Client        |  |
+|  | - DuckDB Demo  |  | - DuckDB Svc   |  | - Event Bus         |  |
+|  | - SQLite Demo  |  | - SQLite Svc   |  | - Channels          |  |
+|  | - Charts       |  | - Analytics    |  | - Message Queue     |  |
+|  +----------------+  +----------------+  +----------+----------+  |
 +------------------------------------------------------------------+
                                                    |
                                        WebSocket (ws://)
@@ -86,12 +85,13 @@ This project demonstrates a modern desktop application architecture featuring:
 +-----------+-----------------------------------------------------+
             v            Odin Backend                             |
 +------------------------------------------------------------------+
-|                    Services Layer                                |
+|                    Database Services Layer                       |
 |  +-----------+ +-----------+ +-----------+ +-----------------+   |
-|  |  Logger   | |   User    | |   Auth    | |  HTTP Service   |   |
+|  |  DuckDB   | |  SQLite   | |   User    | |  Validation     |   |
+|  |  Service  | |  Service  | |  Service  | |  Service        |   |
 |  +-----------+ +-----------+ +-----------+ +-----------------+   |
 |  +-----------+ +-----------+ +-----------+ +-----------------+   |
-|  |  Storage  | |   Cache   | | Registry  | |  Notification   |   |
+|  |  Logger   | |   Auth    | | Registry  | |  Error Handler  |   |
 |  +-----------+ +-----------+ +-----------+ +-----------------+   |
 +------------------------------------------------------------------+
 |                 Core Infrastructure                              |
@@ -103,50 +103,121 @@ This project demonstrates a modern desktop application architecture featuring:
 
 ---
 
-## Project Structure
+## Database Options
 
+### DuckDB - Analytical Database
+
+**Purpose:** Online Analytical Processing (OLAP), complex queries, data warehousing
+
+**Use Cases:**
+- Complex analytical queries
+- Large dataset processing
+- Data warehousing and business intelligence
+- Real-time analytics dashboards
+- Columnar storage benefits
+
+**Features:**
+- Columnar vectorized execution
+- SQL-92 compliance
+- ACID compliance
+- In-memory and persistent storage
+- Query optimization
+- Built-in aggregation functions
+
+**Example Operations:**
+```sql
+-- Complex aggregation
+SELECT 
+    DATE_TRUNC('month', created_at) AS month,
+    COUNT(*) AS user_count,
+    AVG(age) AS avg_age
+FROM users
+GROUP BY 1
+ORDER BY 1;
+
+-- Join operations
+SELECT u.name, COUNT(o.id) AS order_count
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+GROUP BY u.id;
 ```
-starter-odin-webui-angular-rspack/
-├── frontend/                    # Angular frontend (primary)
-│   ├── src/
-│   │   ├── core/               # Core services
-│   │   ├── app/                # App services
-│   │   ├── views/              # Components and views
-│   │   ├── models/             # Type definitions
-│   │   └── documentation/      # Documentation viewer
-│   ├── tests/                  # E2E tests
-│   └── docs/                   # Frontend documentation
-│
-├── src/                        # Odin backend
-│   ├── core/                   # Main entry point
-│   ├── lib/                    # Core libraries
-│   │   ├── di/                 # Dependency injection
-│   │   ├── errors/             # Error handling
-│   │   ├── events/             # Event bus
-│   │   └── utils/              # Utilities
-│   ├── services/               # Business logic
-│   ├── handlers/               # WebUI handlers
-│   └── models/                 # Data models
-│
-├── build/                      # Build output
-├── docs/                       # Consolidated documentation
-│   ├── backend/                # Backend docs
-│   ├── frontend/               # Frontend docs
-│   ├── guides/                 # User guides
-│   └── architecture/           # Architecture docs
-│
-├── lib/                        # Native libraries
-├── tests/                      # Backend tests
-├── examples/                   # Example code
-├── audit/                      # Code audit findings
-│
-├── Makefile                    # Build automation
-├── run.sh                      # Build/run script
-├── README.md                   # This file
-├── QUICKSTART.md               # Quick setup guide
-├── CHANGELOG.md                # Version history
-└── ARCHITECTURAL_DECISIONS.md  # Architecture decisions
+
+**Frontend Components:**
+- DuckdbProfessionalComponent - Complete CRUD with analytics
+- DuckdbUsersComponent - User management table
+- DuckdbProductsComponent - Product catalog
+- DuckdbOrdersComponent - Order management
+- DuckdbAnalyticsComponent - Data analytics dashboard
+
+---
+
+### SQLite - Transactional Database
+
+**Purpose:** Online Transaction Processing (OLTP), embedded storage, lightweight operations
+
+**Use Cases:**
+- Transactional operations
+- Embedded local storage
+- Mobile and desktop applications
+- Lightweight deployments
+- Zero-configuration database
+
+**Features:**
+- Row-based storage
+- Full ACID compliance
+- Serverless architecture
+- Self-contained library
+- Cross-platform compatibility
+- Minimal footprint
+
+**Example Operations:**
+```sql
+-- Transactional insert
+INSERT INTO products (name, price, category, stock)
+VALUES ('New Product', 29.99, 'Electronics', 100);
+
+-- Update with transaction
+BEGIN TRANSACTION;
+UPDATE products SET stock = stock - 1 WHERE id = 123;
+INSERT INTO orders (product_id, quantity) VALUES (123, 1);
+COMMIT;
 ```
+
+**Frontend Components:**
+- SqliteProfessionalComponent - Complete CRUD interface
+- SqliteCrudComponent - Simplified CRUD operations
+
+---
+
+### Database Comparison
+
+| Feature | DuckDB | SQLite |
+|---------|--------|--------|
+| Storage Type | Columnar | Row-based |
+| Best For | OLAP / Analytics | OLTP / Transactions |
+| Query Performance | Complex aggregations | Simple lookups |
+| Concurrency | Read-heavy | Read-write |
+| Memory Usage | Higher | Lower |
+| File Size | Larger | Smaller |
+| Indexing | Limited | Comprehensive |
+| Foreign Keys | Limited | Full support |
+| Triggers | No | Yes |
+
+### When to Use Each
+
+**Choose DuckDB when:**
+- Running complex analytical queries
+- Processing large datasets (millions of rows)
+- Need columnar storage benefits
+- Building data warehouses or BI dashboards
+- Performing statistical analysis
+
+**Choose SQLite when:**
+- Building transactional applications
+- Need full ACID compliance
+- Require minimal footprint
+- Embedded or local storage needed
+- Simple CRUD operations sufficient
 
 ---
 
@@ -159,6 +230,8 @@ starter-odin-webui-angular-rspack/
 | Odin | dev-2025-04+ | System programming language |
 | WebUI | 2.5.0-beta.4 | Browser UI bridge |
 | Civetweb | 1.17 | Embedded WebSocket server |
+| DuckDB | Latest | Analytical database |
+| SQLite | Latest | Transactional database |
 
 ### Frontend
 
@@ -169,53 +242,9 @@ starter-odin-webui-angular-rspack/
 | Bun | 1.3+ | Package manager/runtime |
 | Biome | 2.4.2 | Linter/formatter |
 | Playwright | 1.42.0 | E2E testing |
-| ngx-markdown | 21.1.0 | Markdown rendering |
+| Vega | 6.2.0 | Data visualization |
+| Vega-Lite | 6.4.2 | Chart grammar |
 | Lucide Angular | 0.577.0 | Icon library |
-
-### Development Tools
-
-| Tool | Purpose |
-|------|---------|
-| Make | Build automation |
-| Biome | Linting and formatting |
-| Playwright | E2E testing |
-| Rspack | Fast bundling with HMR |
-
----
-
-## Features
-
-### Core Features
-
-- **Full-Stack Architecture**: Odin backend with Angular frontend
-- **WebSocket Communication**: Bidirectional IPC via WebUI bridge
-- **Dependency Injection**: Type-safe DI in both frontend and backend
-- **Event-Driven**: Pub/sub event bus for decoupled communication
-- **Thread-Safe**: Mutex-protected operations in backend services
-
-### Frontend Features
-
-- **Signal-Based State**: Modern Angular signals for reactive state
-- **Documentation Viewer**: Built-in markdown documentation system
-- **CRUD-Ready Demos**: Full database operation examples
-- **Dark Theme**: Professional dark gray UI design
-- **Responsive Design**: Mobile-first with adaptive layouts
-
-### Backend Features
-
-- **Error Handling**: Errors as values pattern (no exceptions)
-- **Service Architecture**: Modular service-based design
-- **In-Memory Storage**: Hash map-based data storage
-- **Session Management**: Token-based authentication
-- **Logging**: Structured logging with levels
-
-### Demo Features
-
-- **DuckDB CRUD**: Full Create, Read, Update, Delete operations
-- **SQLite Integration**: Database persistence examples
-- **WebSocket Demo**: Real-time communication examples
-- **Data Tables**: Reusable data table components
-- **Query Builder**: SQL query execution with results viewer
 
 ---
 
@@ -252,133 +281,122 @@ make build       # Build everything
 make test        # Run all tests
 make clean       # Clean build artifacts
 make lint        # Lint and fix issues
-make metrics     # Show project statistics
 ```
-
-For detailed commands, see the [Makefile](Makefile).
-
----
-
-## Build System
-
-### Build Flow
-
-```
-+------------------+
-|  Frontend Build  |  bun + rspack
-+--------+---------+
-         | frontend/dist/
-         v
-+------------------+
-|   Copy Assets    |  copy to build/
-+--------+---------+
-         |
-         v
-+------------------+
-|   Odin Build     |  odin build
-+--------+---------+
-         | build/app
-         v
-+------------------+
-| Copy WebUI Lib   |  libwebui-2.so
-+--------+---------+
-         |
-         v
-+------------------+
-|   Run App        |  LD_LIBRARY_PATH
-+------------------+
-```
-
-### Output Directories
-
-- `frontend/dist/` - Compiled Angular app
-- `build/` - Odin executable and dependencies
 
 ---
 
 ## Documentation
 
+### Database Integration Guides
+
+| Document | Purpose |
+|----------|---------|
+| docs/backend/duckdb-integration.md | Production DuckDB backend setup |
+| docs/backend/sqlite-integration.md | Production SQLite backend setup |
+| docs/frontend/duckdb-components.md | DuckDB Angular components |
+| docs/frontend/sqlite-components.md | SQLite Angular components |
+| docs/guides/crud-operations-guide.md | Complete CRUD operations tutorial |
+
 ### Quick References
 
 | Document | Purpose |
 |----------|---------|
-| [QUICKSTART.md](QUICKSTART.md) | 5-minute setup guide |
-| [DX_SUMMARY.md](DX_SUMMARY.md) | Developer experience summary |
-| [DX_IMPROVEMENT_PLAN.md](DX_IMPROVEMENT_PLAN.md) | DX improvement roadmap |
-| [CHANGELOG.md](CHANGELOG.md) | Version history |
-| [ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md) | Architecture decisions |
+| QUICKSTART.md | 5-minute setup guide |
+| ARCHITECTURAL_DECISIONS.md | Architecture decisions |
+| CHANGELOG.md | Version history |
+| SECURITY_AUDIT.md | Security audit report |
 
 ### Full Documentation
 
-Located in `docs/` directory:
+Located in docs/ directory:
 
-- `docs/backend/` - Backend documentation
-- `docs/frontend/` - Frontend documentation
-- `docs/guides/` - User guides and tutorials
-- `docs/architecture/` - Architecture documentation
-
-### In-App Documentation
-
-Access documentation directly in the application:
-1. Open Dashboard
-2. Click "All Docs" in Documentation section
-3. Browse sections and topics
+- docs/backend/ - Backend database integration
+- docs/frontend/ - Frontend component guides
+- docs/guides/ - User guides and tutorials
+- docs/api/ - API reference
 
 ---
 
 ## Development
 
-### Project Status
+### Project Structure
 
-| Metric | Status | Notes |
-|--------|--------|-------|
-| Build | Passing | ~18 seconds |
-| Bundle Size | 920 KB | Initial total |
-| Test Coverage | Moderate | E2E + unit tests |
-| Documentation | Complete | In-app + markdown |
+```
+starter-odin-webui-angular-rspack/
+├── frontend/                    # Angular frontend
+│   └── src/
+│       ├── core/               # Core services (API, Logger)
+│       ├── app/
+│       │   ├── services/       # Application services
+│       │   ├── features/       # Feature modules
+│       │   └── shared/         # Shared components
+│       ├── views/
+│       │   ├── duckdb/         # DuckDB CRUD components
+│       │   ├── sqlite/         # SQLite CRUD components
+│       │   ├── charts/         # Vega charts components
+│       │   └── demo/           # Demo components
+│       └── models/             # Type definitions
+│
+├── src/                        # Odin backend
+│   ├── core/                   # Main entry point
+│   ├── lib/                    # Core libraries
+│   │   ├── database/           # Database abstraction layer
+│   │   ├── crud/               # Generic CRUD operations
+│   │   ├── di/                 # Dependency injection
+│   │   └── events/             # Event bus
+│   ├── services/               # Business logic services
+│   │   ├── duckdb_service.odin
+│   │   ├── sqlite_service.odin
+│   │   └── user_service.odin
+│   └── handlers/               # WebUI handlers
+│
+├── docs/                       # Documentation
+│   ├── backend/                # Backend integration guides
+│   ├── frontend/               # Frontend component guides
+│   └── guides/                 # CRUD tutorials
+│
+├── build/                      # Build output
+├── Makefile                    # Build automation
+└── README.md                   # This file
+```
 
-### Recent Changes
-
-See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
-
-**Latest Release (Unreleased)**
-- Frontend consolidation (merged alt88/alt99 features)
-- Documentation system integration
-- CRUD-ready demo components
-- Thread-safe DI implementation
-- Enhanced build script with verification
-
-### Known Issues
-
-See `audit/open/` directory for open audit findings.
-
-### Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
-
----
-
-## Testing
-
-### Frontend Tests
+### Testing
 
 ```bash
-# Unit tests
+# Frontend tests
 cd frontend && bun test
 
 # E2E tests
 cd frontend && bunx playwright test
 
-# With coverage
-cd frontend && bun test --coverage
-```
-
-### Backend Tests
-
-```bash
+# Backend tests
 cd tests && odin build *.odin
-./di_test
 ```
+
+---
+
+## API Endpoints
+
+### DuckDB Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| getUsers | GET | Retrieve all users |
+| getUserStats | GET | Get user statistics |
+| createUser | POST | Create new user |
+| updateUser | PUT | Update existing user |
+| deleteUser | DELETE | Delete user |
+| executeQuery | POST | Execute custom SQL query |
+
+### SQLite Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| sqlite:getProducts | GET | Retrieve all products |
+| sqlite:getProductStats | GET | Get product statistics |
+| sqlite:createProduct | POST | Create new product |
+| sqlite:updateProduct | PUT | Update existing product |
+| sqlite:deleteProduct | DELETE | Delete product |
 
 ---
 
@@ -387,27 +405,23 @@ cd tests && odin build *.odin
 | Component | Version | Status |
 |-----------|---------|--------|
 | WebUI | 2.5.0-beta.4 | Stable |
-| Civetweb | 1.17 | Stable |
+| DuckDB | Latest | Production Ready |
+| SQLite | Latest | Production Ready |
 | Odin | dev-2025-04+ | Cutting Edge |
 | Angular | 21.1.5 | Latest |
 | Rspack | 1.7.6 | Stable |
 
 ---
 
-## License
-
-MIT License - See LICENSE file for details.
-
----
-
 ## Support
 
-- **Documentation**: `docs/` directory or in-app viewer
-- **Issues**: Check `audit/open/` for known issues
-- **Architecture**: See `ARCHITECTURAL_DECISIONS.md`
+- Database Documentation: docs/backend/ and docs/frontend/
+- Quick Start: QUICKSTART.md
+- Architecture: ARCHITECTURAL_DECISIONS.md
+- Security: SECURITY_AUDIT.md
 
 ---
 
-**Last Updated:** 2026-03-29
-**Build Status:** Passing
-**Development Status:** Active
+Last Updated: 2026-03-30
+Build Status: Passing
+Database Status: Production Ready

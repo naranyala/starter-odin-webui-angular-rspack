@@ -16,6 +16,11 @@ import { DuckdbOrdersComponent } from '../duckdb/duckdb-orders.component';
 import { DashboardStats, NavItem, User, Product, Order, StatsUpdateEvent } from '../../models';
 import { DocumentationViewerComponent } from '../documentation/documentation-viewer.component';
 import { DuckDBCrudDemoComponent } from '../demo/duckdb-crud-demo.component';
+import { SqliteCrudDemoComponent } from '../demo/sqlite-crud-demo.component';
+import { DuckDBProfessionalComponent } from '../duckdb/duckdb-professional.component';
+import { SQLiteProfessionalComponent } from '../sqlite/sqlite-professional.component';
+import { VegaChartsDemoComponent } from '../charts/vega-charts-demo.component';
+import { DbAnalyticsChartsComponent } from '../charts/db-analytics-charts.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -28,6 +33,11 @@ import { DuckDBCrudDemoComponent } from '../demo/duckdb-crud-demo.component';
     DuckdbOrdersComponent,
     DocumentationViewerComponent,
     DuckDBCrudDemoComponent,
+    SqliteCrudDemoComponent,
+    DuckDBProfessionalComponent,
+    SQLiteProfessionalComponent,
+    VegaChartsDemoComponent,
+    DbAnalyticsChartsComponent,
   ],
   template: `
     <div class="dashboard-container">
@@ -58,12 +68,34 @@ import { DuckDBCrudDemoComponent } from '../demo/duckdb-crud-demo.component';
         <!-- Thirdparty Demo Section -->
         <div class="pill-section">
           <button class="section-header" (click)="toggleDemoSection()">
-            <span class="section-title">Thirdparty Demos</span>
+            <span class="section-title">Database Demos</span>
             <span class="section-toggle">{{ demoOpen() ? '▼' : '▶' }}</span>
           </button>
           @if (demoOpen()) {
             <div class="pill-container">
               @for (item of demoItems(); track item.id) {
+                <button
+                  class="dot-pill"
+                  [class.active]="activeView() === item.id"
+                  (click)="onNavClick(item.id)"
+                >
+                  <span class="pill-dot"></span>
+                  <span class="pill-text">{{ item.label }}</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Charts & Visualization Section -->
+        <div class="pill-section">
+          <button class="section-header" (click)="toggleChartsSection()">
+            <span class="section-title">Charts & Visualization</span>
+            <span class="section-toggle">{{ chartsOpen() ? '▼' : '▶' }}</span>
+          </button>
+          @if (chartsOpen()) {
+            <div class="pill-container">
+              @for (item of chartItems(); track item.id) {
                 <button
                   class="dot-pill"
                   [class.active]="activeView() === item.id"
@@ -91,7 +123,13 @@ import { DuckDBCrudDemoComponent } from '../demo/duckdb-crud-demo.component';
           @if (activeView() === 'documentation') {
             <app-documentation-viewer></app-documentation-viewer>
           } @else if (activeView() === 'demo_duckdb_crud') {
-            <app-duckdb-crud-demo></app-duckdb-crud-demo>
+            <app-duckdb-professional></app-duckdb-professional>
+          } @else if (activeView() === 'demo_sqlite_crud') {
+            <app-sqlite-professional></app-sqlite-professional>
+          } @else if (activeView() === 'demo_charts_gallery') {
+            <app-vega-charts-demo></app-vega-charts-demo>
+          } @else if (activeView() === 'demo_db_analytics') {
+            <app-db-analytics-charts></app-db-analytics-charts>
           } @else if (activeView() === 'demo_duckdb') {
             <app-duckdb-users [items]="users()" (statsChange)="onStatsUpdate($any($event))"></app-duckdb-users>
           } @else if (activeView() === 'demo_sqlite') {
@@ -597,6 +635,7 @@ export class DashboardComponent implements OnInit {
 
   docsOpen = signal(true);
   demoOpen = signal(true);
+  chartsOpen = signal(true);
 
   docItems = signal<NavItem[]>([
     { id: 'documentation', label: 'All Docs', icon: '📚', active: false },
@@ -610,11 +649,16 @@ export class DashboardComponent implements OnInit {
 
   demoItems = signal<NavItem[]>([
     { id: 'demo_duckdb_crud', label: 'DuckDB CRUD', icon: '🦆', active: false, description: 'Full CRUD operations demo' },
-    { id: 'demo_sqlite_crud', label: 'SQLite CRUD', icon: '🗃️', active: false, description: 'SQLite database demo' },
+    { id: 'demo_sqlite_crud', label: 'SQLite CRUD', icon: '🗄️', active: false, description: 'SQLite database demo' },
     { id: 'demo_websocket', label: 'WebSocket', icon: '🔌', active: false, description: 'Real-time communication' },
     { id: 'demo_duckdb', label: 'DuckDB Users', icon: '👥', active: false, description: 'User management demo' },
     { id: 'demo_sqlite', label: 'SQLite Products', icon: '📦', active: false, description: 'Product catalog demo' },
     { id: 'demo_websocket_alt', label: 'WebSocket Orders', icon: '📊', active: false, description: 'Live orders demo' },
+  ]);
+
+  chartItems = signal<NavItem[]>([
+    { id: 'demo_charts_gallery', label: 'Charts Gallery', icon: '📊', active: false, description: 'Vega charts showcase' },
+    { id: 'demo_db_analytics', label: 'DB Analytics', icon: '📈', active: false, description: 'Database analytics' },
   ]);
 
   currentPageTitle = signal('Overview');
@@ -703,6 +747,10 @@ export class DashboardComponent implements OnInit {
 
   toggleDemoSection(): void {
     this.demoOpen.update(v => !v);
+  }
+
+  toggleChartsSection(): void {
+    this.chartsOpen.update(v => !v);
   }
 
   onMarkdownLoad(event: any): void {

@@ -1,1094 +1,493 @@
 /**
- * CRUD-Ready DuckDB Demo Component
+ * DuckDB CRUD Demo Component
  * 
- * Full-featured demonstration of DuckDB integration with:
- * - Create, Read, Update, Delete operations
- * - Data validation
- * - Loading states
- * - Error handling
- * - Feature checklist
+ * Complete CRUD operations demo with DuckDB database
+ * Features: Create, Read, Update, Delete with statistics
  */
 
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MarkdownModule } from 'ngx-markdown';
 import { LoggerService } from '../../core/logger.service';
 import { ApiService } from '../../core/api.service';
-import { DataTableComponent } from '../shared/data-table.component';
 
-export interface DuckDBTable {
+export interface User {
   id: number;
   name: string;
-  rows: number;
-  columns: string[];
-  createdAt: string;
+  email: string;
+  age: number;
+  created_at: string;
 }
 
-export interface DuckDBQuery {
-  id: number;
-  sql: string;
-  description: string;
-  lastRun?: string;
-  duration?: number;
-}
-
-export interface DemoFeature {
-  id: string;
-  name: string;
-  description: string;
-  status: 'available' | 'coming-soon' | 'planned';
-  completed: boolean;
+export interface UserStats {
+  total_users: number;
+  today_count: number;
+  unique_domains: number;
+  avg_age: number;
 }
 
 @Component({
   selector: 'app-duckdb-crud-demo',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    MarkdownModule,
-    DataTableComponent,
-  ],
+  imports: [CommonModule, FormsModule],
   template: `
-    <div class="duckdb-demo-container">
-      <!-- Header -->
-      <header class="demo-header">
-        <div class="header-content">
-          <h1 class="demo-title">
-            <span class="title-icon">🦆</span>
-            DuckDB CRUD Demo
-          </h1>
-          <p class="demo-subtitle">Full-featured database operations demonstration</p>
-        </div>
-        <div class="header-actions">
-          <button class="btn btn-primary" (click)="refreshData()" [disabled]="isLoading()">
-            <span class="btn-icon">🔄</span>
-            Refresh
-          </button>
-          <button class="btn btn-secondary" (click)="toggleDocs()">
-            <span class="btn-icon">📚</span>
-            {{ showDocs() ? 'Hide Docs' : 'Show Docs' }}
-          </button>
-        </div>
-      </header>
-
-      <!-- Feature Checklist -->
-      <section class="feature-checklist">
-        <h2 class="section-title">✨ Available Features</h2>
-        <div class="checklist-grid">
-          @for (feature of features(); track feature.id) {
-            <div class="checklist-item" [class.completed]="feature.completed" [class.coming-soon]="feature.status === 'coming-soon'">
-              <div class="checklist-icon">
-                @if (feature.status === 'available') {
-                  <span class="icon-check">✅</span>
-                } @else if (feature.status === 'coming-soon') {
-                  <span class="icon-soon">🔜</span>
-                } @else {
-                  <span class="icon-planned">📋</span>
-                }
-              </div>
-              <div class="checklist-content">
-                <h3 class="feature-name">{{ feature.name }}</h3>
-                <p class="feature-description">{{ feature.description }}</p>
-              </div>
-              <div class="feature-status" [class]="feature.status">
-                {{ feature.status }}
-              </div>
-            </div>
-          }
-        </div>
-      </section>
-
-      <!-- Main Content Grid -->
-      <div class="content-grid">
-        <!-- Tables Panel -->
-        <section class="panel tables-panel">
-          <div class="panel-header">
-            <h2 class="panel-title">
-              <span class="panel-icon">📊</span>
-              Tables
-            </h2>
-            <button class="btn btn-sm btn-primary" (click)="openCreateTableModal()">
-              <span class="btn-icon">+</span>
-              New Table
-            </button>
+    <div class="crud-wrapper">
+      <div class="crud-container">
+        <!-- Header -->
+        <div class="crud-header">
+          <div class="header-logo">
+            <span class="logo-icon">🦆</span>
           </div>
-          
-          <div class="panel-content">
-            @if (tables().length === 0) {
+          <div class="header-content">
+            <h1 class="header-title">DuckDB CRUD Demo</h1>
+            <p class="header-subtitle">Complete Create, Read, Update, Delete operations with analytics</p>
+          </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+          <div class="stat-item">
+            <span class="stat-icon">👥</span>
+            <span class="stat-value">{{ stats().total_users }}</span>
+            <span class="stat-label">Total Users</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">📅</span>
+            <span class="stat-value">{{ stats().today_count }}</span>
+            <span class="stat-label">Added Today</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">🌐</span>
+            <span class="stat-value">{{ stats().unique_domains }}</span>
+            <span class="stat-label">Email Domains</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">📊</span>
+            <span class="stat-value">{{ stats().avg_age }}</span>
+            <span class="stat-label">Avg Age</span>
+          </div>
+        </div>
+
+        <!-- Action Tabs -->
+        <div class="tabs">
+          <button type="button" class="tab" [class.active]="activeTab() === 'list'" (click)="setActiveTab('list')">
+            <span class="tab-icon">📋</span>
+            <span class="tab-label">User List</span>
+          </button>
+          <button type="button" class="tab" [class.active]="activeTab() === 'create'" (click)="setActiveTab('create')">
+            <span class="tab-icon">➕</span>
+            <span class="tab-label">Add User</span>
+          </button>
+          <button type="button" class="tab" [class.active]="activeTab() === 'query'" (click)="setActiveTab('query')">
+            <span class="tab-icon">🔍</span>
+            <span class="tab-label">Query Builder</span>
+          </button>
+        </div>
+
+        <!-- List Tab -->
+        @if (activeTab() === 'list') {
+          <div class="tab-content">
+            <div class="toolbar">
+              <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" placeholder="Search users..." [(ngModel)]="searchQuery"
+                  (input)="filterUsers()" />
+              </div>
+              <button class="btn-refresh" (click)="loadUsers()">
+                <span>🔄</span> Refresh
+              </button>
+            </div>
+
+            @if (isLoading()) {
+              <div class="loading-state">
+                <span class="loading-spinner">⏳</span>
+                <span>Loading users...</span>
+              </div>
+            } @else if (filteredUsers().length === 0) {
               <div class="empty-state">
-                <span class="empty-icon">📊</span>
-                <p>No tables yet. Create your first table!</p>
+                <span class="empty-icon">📭</span>
+                <p>No users found</p>
+                <button class="btn-primary" (click)="setActiveTab('create')">Add your first user</button>
               </div>
             } @else {
-              <div class="tables-list">
-                @for (table of tables(); track table.id) {
-                  <div class="table-card" (click)="selectTable(table)">
-                    <div class="table-header">
-                      <h3 class="table-name">{{ table.name }}</h3>
-                      <span class="table-rows">{{ table.rows }} rows</span>
+              <div class="user-table">
+                <div class="table-header">
+                  <div class="col col-name">Name</div>
+                  <div class="col col-email">Email</div>
+                  <div class="col col-age">Age</div>
+                  <div class="col col-created">Created</div>
+                  <div class="col col-actions">Actions</div>
+                </div>
+                @for (user of filteredUsers(); track user.id) {
+                  <div class="table-row">
+                    <div class="col col-name">
+                      <span class="avatar">{{ getInitials(user.name) }}</span>
+                      <span class="user-name-text">{{ user.name }}</span>
                     </div>
-                    <div class="table-columns">
-                      @for (col of table.columns; track col; let last = $last) {
-                        <span class="column-tag">{{ col }}{{ last ? '' : ',' }}</span>
-                      }
-                    </div>
-                    <div class="table-actions">
-                      <button class="btn-action" (click)="editTable(table); $event.stopPropagation()">
-                        ✏️ Edit
-                      </button>
-                      <button class="btn-action btn-danger" (click)="deleteTable(table); $event.stopPropagation()">
-                        🗑️ Delete
-                      </button>
+                    <div class="col col-email">{{ user.email }}</div>
+                    <div class="col col-age">{{ user.age }}</div>
+                    <div class="col col-created">{{ formatDate(user.created_at) }}</div>
+                    <div class="col col-actions">
+                      <button class="btn-action btn-edit" (click)="editUser(user)" title="Edit">✏️</button>
+                      <button class="btn-action btn-delete" (click)="deleteUser(user)" title="Delete">🗑️</button>
                     </div>
                   </div>
                 }
               </div>
             }
           </div>
-        </section>
+        }
 
-        <!-- Query Panel -->
-        <section class="panel query-panel">
-          <div class="panel-header">
-            <h2 class="panel-title">
-              <span class="panel-icon">🔍</span>
-              SQL Query
-            </h2>
-            <button class="btn btn-sm btn-primary" (click)="openQueryModal()">
-              <span class="btn-icon">+</span>
-              New Query
-            </button>
+        <!-- Create/Edit Tab -->
+        @if (activeTab() === 'create') {
+          <div class="tab-content">
+            <form class="user-form" (ngSubmit)="saveUser()">
+              <div class="form-header">
+                <h2>{{ isEditMode() ? 'Edit User' : 'Create New User' }}</h2>
+                @if (isEditMode()) {
+                  <button type="button" class="btn-cancel" (click)="cancelEdit()">Cancel</button>
+                }
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">👤</span>
+                  Full Name
+                </label>
+                <input type="text" class="form-input"
+                  [ngModel]="editingUser().name"
+                  (ngModelChange)="updateEditingUser('name', $event)"
+                  name="name"
+                  required
+                  placeholder="Enter full name" />
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">📧</span>
+                  Email Address
+                </label>
+                <input type="email" class="form-input"
+                  [ngModel]="editingUser().email"
+                  (ngModelChange)="updateEditingUser('email', $event)"
+                  name="email"
+                  required
+                  placeholder="email@example.com" />
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">🎂</span>
+                  Age
+                </label>
+                <input type="number" class="form-input"
+                  [ngModel]="editingUser().age"
+                  (ngModelChange)="updateEditingUser('age', $event)"
+                  name="age"
+                  required
+                  min="1"
+                  max="150"
+                  placeholder="25" />
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn-submit" [disabled]="isLoading()">
+                  {{ isLoading() ? (isEditMode() ? 'Updating...' : 'Creating...') : (isEditMode() ? '💾 Update User' : '➕ Create User') }}
+                </button>
+              </div>
+            </form>
           </div>
-          
-          <div class="panel-content">
-            <div class="query-editor">
-              <textarea
-                class="sql-input"
-                placeholder="SELECT * FROM table_name..."
-                [ngModel]="currentQuery()"
-                (ngModelChange)="currentQuery.set($event)"
-                rows="6">
-              </textarea>
+        }
+
+        <!-- Query Builder Tab -->
+        @if (activeTab() === 'query') {
+          <div class="tab-content">
+            <div class="query-builder">
+              <div class="query-section">
+                <label class="query-label">SELECT</label>
+                <input type="text" class="query-input" [(ngModel)]="queryFields" placeholder="* or column names" />
+              </div>
+              <div class="query-section">
+                <label class="query-label">WHERE</label>
+                <input type="text" class="query-input" [(ngModel)]="queryWhere" placeholder="age > 25 OR name LIKE '%John%'" />
+              </div>
+              <div class="query-section">
+                <label class="query-label">ORDER BY</label>
+                <input type="text" class="query-input" [(ngModel)]="queryOrder" placeholder="created_at DESC" />
+              </div>
+              <div class="query-section">
+                <label class="query-label">LIMIT</label>
+                <input type="number" class="query-input" [(ngModel)]="queryLimit" placeholder="10" min="1" max="1000" />
+              </div>
               <div class="query-actions">
-                <button class="btn btn-primary" (click)="executeQuery()" [disabled]="!currentQuery() || isExecuting()">
-                  <span class="btn-icon">▶️</span>
-                  {{ isExecuting() ? 'Running...' : 'Run Query' }}
-                </button>
-                <button class="btn btn-secondary" (click)="clearQuery()">
-                  <span class="btn-icon">🧹</span>
-                  Clear
-                </button>
+                <button class="btn-query" (click)="executeQuery()">▶ Execute Query</button>
+                <button class="btn-clear" (click)="clearQuery()">Clear</button>
               </div>
             </div>
 
-            @if (queryResults().length > 0) {
-              <div class="query-results">
-                <div class="results-header">
-                  <h3>Results</h3>
-                  <span class="results-count">{{ queryResults().length }} rows</span>
-                  @if (queryDuration() > 0) {
-                    <span class="results-duration">⏱️ {{ queryDuration() }}ms</span>
-                  }
+            @if (queryResult()) {
+              <div class="query-result">
+                <h3 class="result-title">Query Result</h3>
+                <div class="result-content">
+                  <pre class="result-json">{{ queryResult() | json }}</pre>
                 </div>
-                <div class="results-table-container">
-                  <table class="results-table">
-                    <thead>
-                      <tr>
-                        @for (col of resultColumns(); track col) {
-                          <th>{{ col }}</th>
-                        }
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (row of queryResults(); track row; let i = $index) {
-                        <tr>
-                          @for (col of resultColumns(); track col) {
-                            <td>{{ row[col] }}</td>
-                          }
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            }
-
-            @if (queryError()) {
-              <div class="error-message">
-                <span class="error-icon">❌</span>
-                {{ queryError() }}
               </div>
             }
           </div>
-        </section>
+        }
       </div>
-
-      <!-- Documentation Panel -->
-      @if (showDocs()) {
-        <section class="docs-panel">
-          <div class="docs-content">
-            <markdown [src]="'assets/docs/duckdb-crud-demo.md'"></markdown>
-          </div>
-        </section>
-      }
-
-      <!-- Create Table Modal -->
-      @if (showCreateTableModal()) {
-        <div class="modal-backdrop" (click)="closeCreateTableModal()">
-          <div class="modal" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>Create New Table</h3>
-              <button class="btn-close" (click)="closeCreateTableModal()">✕</button>
-            </div>
-            <div class="modal-body">
-              <form (ngSubmit)="createTable()">
-                <div class="form-group">
-                  <label>Table Name</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [ngModel]="newTableName()"
-                    (ngModelChange)="newTableName.set($event)"
-                    name="tableName"
-                    placeholder="e.g., users, products, orders"
-                    required>
-                </div>
-                <div class="form-group">
-                  <label>Columns (comma-separated)</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [ngModel]="newTableColumns()"
-                    (ngModelChange)="newTableColumns.set($event)"
-                    name="columns"
-                    placeholder="e.g., id, name, email, created_at"
-                    required>
-                </div>
-                <div class="modal-actions">
-                  <button type="button" class="btn btn-secondary" (click)="closeCreateTableModal()">Cancel</button>
-                  <button type="submit" class="btn btn-primary" [disabled]="!newTableName() || !newTableColumns()">
-                    Create Table
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      }
     </div>
   `,
   styles: [`
-    .duckdb-demo-container {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      background: #0f172a;
-      overflow: hidden;
-    }
-
-    /* Header */
-    .demo-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 24px 32px;
-      background: rgba(15, 23, 42, 0.8);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-    }
-
-    .header-content {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .demo-title {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 700;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .title-icon {
-      font-size: 32px;
-    }
-
-    .demo-subtitle {
-      margin: 0;
-      font-size: 14px;
-      color: #94a3b8;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 12px;
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #06b6d4, #3b82f6);
-      color: #fff;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
-    }
-
-    .btn-secondary {
-      background: rgba(59, 130, 246, 0.1);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(59, 130, 246, 0.2);
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-sm {
-      padding: 8px 16px;
-      font-size: 13px;
-    }
-
-    .btn-icon {
-      font-size: 16px;
-    }
-
-    /* Feature Checklist */
-    .feature-checklist {
-      padding: 24px 32px;
-      background: rgba(30, 41, 59, 0.3);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-    }
-
-    .section-title {
-      margin: 0 0 16px;
-      font-size: 16px;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .checklist-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-    }
-
-    .checklist-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 16px;
-      background: rgba(59, 130, 246, 0.05);
-      border: 1px solid rgba(59, 130, 246, 0.1);
-      border-radius: 8px;
-      transition: all 0.2s;
-    }
-
-    .checklist-item.completed {
-      background: rgba(16, 185, 129, 0.05);
-      border-color: rgba(16, 185, 129, 0.2);
-    }
-
-    .checklist-item.coming-soon {
-      background: rgba(245, 158, 11, 0.05);
-      border-color: rgba(245, 158, 11, 0.1);
-    }
-
-    .checklist-icon {
-      font-size: 20px;
-    }
-
-    .checklist-content {
-      flex: 1;
-    }
-
-    .feature-name {
-      margin: 0 0 4px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .feature-description {
-      margin: 0;
-      font-size: 12px;
-      color: #94a3b8;
-    }
-
-    .feature-status {
-      font-size: 10px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      font-weight: 600;
-    }
-
-    .feature-status.available {
-      background: rgba(16, 185, 129, 0.2);
-      color: #34d399;
-    }
-
-    .feature-status.coming-soon {
-      background: rgba(245, 158, 11, 0.2);
-      color: #fbbf24;
-    }
-
-    .feature-status.planned {
-      background: rgba(148, 163, 184, 0.2);
-      color: #94a3b8;
-    }
-
-    /* Content Grid */
-    .content-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      padding: 24px 32px;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* Panels */
-    .panel {
-      display: flex;
-      flex-direction: column;
-      background: rgba(30, 41, 59, 0.3);
-      border: 1px solid rgba(148, 163, 184, 0.1);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 20px;
-      background: rgba(59, 130, 246, 0.05);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-    }
-
-    .panel-title {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 600;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .panel-icon {
-      font-size: 18px;
-    }
-
-    .panel-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
-
-    /* Tables List */
-    .tables-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .table-card {
-      padding: 16px;
-      background: rgba(15, 23, 42, 0.5);
-      border: 1px solid rgba(148, 163, 184, 0.1);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .table-card:hover {
-      background: rgba(59, 130, 246, 0.05);
-      border-color: rgba(59, 130, 246, 0.3);
-    }
-
-    .table-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .table-name {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .table-rows {
-      font-size: 12px;
-      color: #94a3b8;
-    }
-
-    .table-columns {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-
-    .column-tag {
-      font-size: 11px;
-      padding: 4px 8px;
-      background: rgba(59, 130, 246, 0.1);
-      color: #60a5fa;
-      border-radius: 4px;
-    }
-
-    .table-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn-action {
-      padding: 6px 12px;
-      background: transparent;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 6px;
-      color: #94a3b8;
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.2s;
-    }
-
-    .btn-action:hover {
-      background: rgba(59, 130, 246, 0.1);
-      border-color: rgba(59, 130, 246, 0.3);
-      color: #fff;
-    }
-
-    .btn-action.btn-danger:hover {
-      background: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.3);
-      color: #ef4444;
-    }
-
-    /* Query Editor */
-    .query-editor {
-      margin-bottom: 20px;
-    }
-
-    .sql-input {
-      width: 100%;
-      padding: 12px;
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 8px;
-      color: #e2e8f0;
-      font-family: 'Fira Code', monospace;
-      font-size: 13px;
-      resize: vertical;
-      min-height: 120px;
-    }
-
-    .sql-input:focus {
-      outline: none;
-      border-color: rgba(59, 130, 246, 0.5);
-    }
-
-    .query-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    /* Query Results */
-    .query-results {
-      background: rgba(15, 23, 42, 0.5);
-      border: 1px solid rgba(148, 163, 184, 0.1);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .results-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      background: rgba(59, 130, 246, 0.05);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-    }
-
-    .results-header h3 {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .results-count,
-    .results-duration {
-      font-size: 12px;
-      color: #94a3b8;
-    }
-
-    .results-duration {
-      color: #34d399;
-    }
-
-    .results-table-container {
-      overflow-x: auto;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .results-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-
-    .results-table th {
-      padding: 10px 12px;
-      background: rgba(30, 41, 59, 0.8);
-      color: #fff;
-      font-weight: 600;
-      text-align: left;
-      border-bottom: 2px solid rgba(148, 163, 184, 0.2);
-      position: sticky;
-      top: 0;
-    }
-
-    .results-table td {
-      padding: 8px 12px;
-      color: #e2e8f0;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-    }
-
-    .results-table tr:hover {
-      background: rgba(59, 130, 246, 0.05);
-    }
-
-    /* Error Message */
-    .error-message {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-      border-radius: 8px;
-      color: #fca5a5;
-      font-size: 13px;
-    }
-
-    .error-icon {
-      font-size: 16px;
-    }
-
-    /* Empty State */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 60px 20px;
-      color: #64748b;
-    }
-
-    .empty-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.5;
-    }
-
-    /* Docs Panel */
-    .docs-panel {
-      padding: 24px 32px;
-      background: rgba(30, 41, 59, 0.3);
-      border-top: 1px solid rgba(148, 163, 184, 0.1);
-      overflow-y: auto;
-      max-height: 400px;
-    }
-
-    .docs-content {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    /* Modal */
-    .modal-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .modal {
-      background: #1e293b;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 12px;
-      width: 90%;
-      max-width: 500px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-    }
-
-    .modal-header h3 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .btn-close {
-      background: transparent;
-      border: none;
-      color: #94a3b8;
-      cursor: pointer;
-      font-size: 20px;
-      padding: 4px;
-    }
-
-    .btn-close:hover {
-      color: #fff;
-    }
-
-    .modal-body {
-      padding: 20px;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #fff;
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 10px 14px;
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 8px;
-      color: #fff;
-      font-size: 14px;
-    }
-
-    .form-control:focus {
-      outline: none;
-      border-color: rgba(59, 130, 246, 0.5);
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
-    /* Responsive */
-    @media (max-width: 1024px) {
-      .content-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  `],
+    :host { display: block; }
+    .crud-wrapper { display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 20px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    .crud-container { background: rgba(255,255,255,0.98); border-radius: 20px; padding: 40px; width: 100%; max-width: 1000px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .crud-header { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; }
+    .header-logo { display: flex; width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #00b4d8, #0077b6); justify-content: center; align-items: center; box-shadow: 0 4px 15px rgba(0,180,216,0.4); }
+    .logo-icon { font-size: 40px; }
+    .header-content { flex: 1; }
+    .header-title { font-size: 32px; margin: 0 0 8px; color: #1a1a2e; font-weight: 700; }
+    .header-subtitle { font-size: 15px; color: #666; margin: 0; }
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 15px; }
+    .stat-item { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .stat-icon { font-size: 24px; }
+    .stat-value { display: block; font-size: 28px; font-weight: bold; color: #00b4d8; }
+    .stat-label { display: block; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 25px; }
+    .tab { flex: 1; padding: 14px 20px; border: 2px solid #e0e0e0; border-radius: 12px; background: white; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; color: #333; }
+    .tab.active { border-color: #00b4d8; background: linear-gradient(135deg, #e0f7ff, #e8f5e9); color: #0077b6; }
+    .tab:hover:not(.active) { border-color: #00b4d8; background: #f8f9fa; }
+    .tab-icon { font-size: 16px; }
+    .tab-content { min-height: 400px; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 20px; }
+    .search-box { flex: 1; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 10px; transition: border-color 0.2s; }
+    .search-box:focus-within { border-color: #00b4d8; }
+    .search-icon { font-size: 18px; }
+    .search-input { flex: 1; border: none; outline: none; font-size: 14px; }
+    .btn-refresh { padding: 12px 20px; background: #f0f0f0; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+    .btn-refresh:hover { background: #e0e0e0; }
+    .loading-state { text-align: center; padding: 60px 20px; color: #666; }
+    .loading-spinner { font-size: 32px; display: block; margin-bottom: 10px; animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+    .empty-icon { font-size: 48px; display: block; margin-bottom: 15px; }
+    .btn-primary { padding: 12px 24px; background: linear-gradient(135deg, #00b4d8, #0077b6); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 15px; }
+    .user-table { display: flex; flex-direction: column; gap: 10px; }
+    .table-header, .table-row { display: grid; grid-template-columns: 2fr 2fr 1fr 1.5fr 1fr; gap: 15px; padding: 15px; align-items: center; }
+    .table-header { background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 12px; font-weight: 600; font-size: 13px; color: #333; text-transform: uppercase; letter-spacing: 0.5px; }
+    .table-row { background: white; border: 1px solid #e0e0e0; border-radius: 12px; transition: all 0.2s; }
+    .table-row:hover { border-color: #00b4d8; box-shadow: 0 2px 10px rgba(0,180,216,0.1); }
+    .col { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-name { display: flex; align-items: center; gap: 10px; }
+    .avatar { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #00b4d8, #0077b6); color: white; font-weight: 600; font-size: 12px; flex-shrink: 0; }
+    .user-name-text { font-weight: 500; }
+    .actions { display: flex; gap: 8px; }
+    .btn-action { padding: 8px 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .btn-edit { background: #e3f2fd; }
+    .btn-edit:hover { background: #bbdefb; }
+    .btn-delete { background: #ffebee; }
+    .btn-delete:hover { background: #ffcdd2; }
+    .user-form { display: flex; flex-direction: column; gap: 25px; max-width: 500px; margin: 0 auto; }
+    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .form-header h2 { margin: 0; color: #1a1a2e; font-size: 24px; }
+    .btn-cancel { padding: 8px 16px; background: #f0f0f0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-label { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #333; font-size: 14px; }
+    .label-icon { font-size: 16px; }
+    .form-input { padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 15px; transition: all 0.2s; }
+    .form-input:focus { outline: none; border-color: #00b4d8; box-shadow: 0 0 0 3px rgba(0,180,216,0.1); }
+    .form-actions { display: flex; justify-content: center; padding-top: 10px; }
+    .btn-submit { padding: 16px 40px; background: linear-gradient(135deg, #00b4d8, #0077b6); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; min-width: 200px; }
+    .btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,180,216,0.4); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+    .query-builder { display: flex; flex-direction: column; gap: 20px; max-width: 600px; margin: 0 auto; }
+    .query-section { display: flex; flex-direction: column; gap: 8px; }
+    .query-label { font-weight: 600; color: #333; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .query-input { padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; font-family: monospace; }
+    .query-input:focus { outline: none; border-color: #00b4d8; }
+    .query-actions { display: flex; gap: 10px; justify-content: center; padding-top: 10px; }
+    .btn-query { padding: 14px 30px; background: linear-gradient(135deg, #00b4d8, #0077b6); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-query:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,180,216,0.4); }
+    .btn-clear { padding: 14px 30px; background: #f0f0f0; color: #666; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-clear:hover { background: #e0e0e0; }
+    .query-result { margin-top: 30px; padding: 20px; background: #1a1a2e; border-radius: 12px; }
+    .result-title { color: #00b4d8; font-size: 16px; margin: 0 0 15px; font-weight: 600; }
+    .result-content { max-height: 300px; overflow-y: auto; }
+    .result-json { color: #98c379; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all; margin: 0; }
+    
+    @media (max-width: 768px) {
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .table-header, .table-row { grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; }
+      .col-actions { grid-column: 1 / -1; justify-content: center; }
+      .tabs { flex-direction: column; }
+    }
+  `]
 })
 export class DuckDBCrudDemoComponent implements OnInit {
-  private logger = inject(LoggerService);
-  private api = inject(ApiService);
+  private readonly logger = inject(LoggerService);
+  private readonly api = inject(ApiService);
 
-  // State
+  activeTab = signal<'list' | 'create' | 'query'>('list');
   isLoading = signal(false);
-  isExecuting = signal(false);
-  showDocs = signal(false);
-  showCreateTableModal = signal(false);
+  isEditMode = signal(false);
+  stats = signal<UserStats>({ total_users: 0, today_count: 0, unique_domains: 0, avg_age: 0 });
+  users = signal<User[]>([]);
+  filteredUsers = signal<User[]>([]);
+  searchQuery = '';
+  queryResult = signal<unknown>(null);
 
-  // Data
-  tables = signal<DuckDBTable[]>([]);
-  queries = signal<DuckDBQuery[]>([]);
-  queryResults = signal<any[]>([]);
-  resultColumns = signal<string[]>([]);
-  currentQuery = signal('');
-  queryDuration = signal(0);
-  queryError = signal<string | null>(null);
+  editingUser = signal<Partial<User>>({ name: '', email: '', age: 25 });
 
-  // New table form
-  newTableName = signal('');
-  newTableColumns = signal('');
+  // Query builder state
+  queryFields = signal('*');
+  queryWhere = signal('');
+  queryOrder = signal('');
+  queryLimit = signal(10);
 
-  // Features checklist
-  features = signal<DemoFeature[]>([
-    {
-      id: 'create-table',
-      name: 'Create Table',
-      description: 'Create new DuckDB tables with custom schema',
-      status: 'available',
-      completed: true,
-    },
-    {
-      id: 'read-data',
-      name: 'Read Data',
-      description: 'Query and view table data with SQL',
-      status: 'available',
-      completed: true,
-    },
-    {
-      id: 'update-data',
-      name: 'Update Data',
-      description: 'Modify existing records with UPDATE queries',
-      status: 'available',
-      completed: true,
-    },
-    {
-      id: 'delete-data',
-      name: 'Delete Data',
-      description: 'Remove records with DELETE queries',
-      status: 'available',
-      completed: true,
-    },
-    {
-      id: 'sql-editor',
-      name: 'SQL Editor',
-      description: 'Write and execute custom SQL queries',
-      status: 'available',
-      completed: true,
-    },
-    {
-      id: 'query-history',
-      name: 'Query History',
-      description: 'Track and reuse previous queries',
-      status: 'coming-soon',
-      completed: false,
-    },
-    {
-      id: 'export-data',
-      name: 'Export Data',
-      description: 'Export query results to CSV/JSON',
-      status: 'coming-soon',
-      completed: false,
-    },
-    {
-      id: 'import-data',
-      name: 'Import Data',
-      description: 'Import data from CSV/JSON files',
-      status: 'planned',
-      completed: false,
-    },
-    {
-      id: 'visual-builder',
-      name: 'Visual Query Builder',
-      description: 'Build queries with drag-and-drop interface',
-      status: 'planned',
-      completed: false,
-    },
-  ]);
-
-  ngOnInit(): void {
-    this.loadTables();
-    this.loadQueries();
+  updateEditingUser(field: keyof User, value: string | number) {
+    this.editingUser.update(u => ({ ...u, [field]: value }));
   }
 
-  async loadTables(): Promise<void> {
+  setActiveTab(tab: 'list' | 'create' | 'query'): void {
+    this.activeTab.set(tab);
+    if (tab === 'list') {
+      this.loadUsers();
+    } else if (tab === 'create') {
+      this.resetForm();
+    }
+  }
+
+  filterUsers(): void {
+    const query = this.searchQuery.toLowerCase();
+    this.filteredUsers.set(
+      this.users().filter(u =>
+        u.name.toLowerCase().includes(query) ||
+        u.email.toLowerCase().includes(query)
+      )
+    );
+  }
+
+  formatDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString();
+  }
+
+  getInitials(name: string): string {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  async loadUsers(): Promise<void> {
     this.isLoading.set(true);
     try {
-      // In production, call actual API
-      // const response = await this.api.callOrThrow<DuckDBTable[]>('duckdb.getTables');
-      // this.tables.set(response);
-      
-      // Demo data
-      this.tables.set([
-        {
-          id: 1,
-          name: 'users',
-          rows: 150,
-          columns: ['id', 'name', 'email', 'role', 'created_at'],
-          createdAt: '2026-03-15T10:00:00Z',
-        },
-        {
-          id: 2,
-          name: 'products',
-          rows: 500,
-          columns: ['id', 'name', 'price', 'category', 'stock'],
-          createdAt: '2026-03-16T14:30:00Z',
-        },
-        {
-          id: 3,
-          name: 'orders',
-          rows: 1200,
-          columns: ['id', 'user_id', 'product_id', 'quantity', 'total', 'status'],
-          createdAt: '2026-03-17T09:15:00Z',
-        },
+      const [users, stats] = await Promise.all([
+        this.api.callOrThrow<User[]>('getUsers'),
+        this.api.callOrThrow<UserStats>('getUserStats'),
       ]);
+      this.users.set(users);
+      this.stats.set(stats);
+      this.filterUsers();
     } catch (error) {
-      this.logger.error('Failed to load tables', error);
+      this.logger.error('Failed to load users', error);
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  async loadQueries(): Promise<void> {
+  resetForm(): void {
+    this.isEditMode.set(false);
+    this.editingUser.set({ name: '', email: '', age: 25 });
+  }
+
+  async saveUser(): Promise<void> {
+    if (!this.editingUser().name || !this.editingUser().email || !this.editingUser().age) {
+      this.logger.warn('Save user validation failed');
+      return;
+    }
+
+    this.isLoading.set(true);
     try {
-      // Demo data
-      this.queries.set([
-        {
-          id: 1,
-          sql: 'SELECT * FROM users LIMIT 10',
-          description: 'Get recent users',
-          lastRun: '2026-03-29T10:00:00Z',
-          duration: 45,
-        },
-      ]);
+      if (this.isEditMode()) {
+        await this.api.callOrThrow('updateUser', [this.editingUser()]);
+        this.logger.info('User updated successfully');
+      } else {
+        await this.api.callOrThrow('createUser', [this.editingUser()]);
+        this.logger.info('User created successfully');
+      }
+      this.resetForm();
+      this.setActiveTab('list');
     } catch (error) {
-      this.logger.error('Failed to load queries', error);
+      this.logger.error('Failed to save user', error);
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
-  selectTable(table: DuckDBTable): void {
-    this.currentQuery.set(`SELECT * FROM ${table.name} LIMIT 100`);
-    this.logger.info(`Selected table: ${table.name}`);
+  editUser(user: User): void {
+    this.editingUser.set({ ...user });
+    this.isEditMode.set(true);
+    this.setActiveTab('create');
+  }
+
+  async deleteUser(user: User): Promise<void> {
+    if (!confirm(`Delete ${user.name}?`)) {
+      return;
+    }
+
+    this.isLoading.set(true);
+    try {
+      await this.api.callOrThrow('deleteUser', [user.id]);
+      this.logger.info('User deleted');
+      await this.loadUsers();
+    } catch (error) {
+      this.logger.error('Failed to delete user', error);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  cancelEdit(): void {
+    this.resetForm();
+    this.setActiveTab('list');
   }
 
   async executeQuery(): Promise<void> {
-    if (!this.currentQuery()) return;
-    
-    this.isExecuting.set(true);
-    this.queryError.set(null);
-    const startTime = Date.now();
-    
+    this.isLoading.set(true);
     try {
-      // In production, call actual API
-      // const response = await this.api.callOrThrow<any[]>('duckdb.executeQuery', [this.currentQuery()]);
-      
-      // Simulate query execution
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Demo results
-      this.queryResults.set([
-        { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Admin' },
-        { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'User' },
-        { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'User' },
-      ]);
-      
-      this.resultColumns.set(['id', 'name', 'email', 'role']);
-      this.queryDuration.set(Date.now() - startTime);
-      
-      this.logger.info('Query executed successfully', { duration: this.queryDuration() });
+      let sql = `SELECT ${this.queryFields()}`;
+      sql += ' FROM users';
+
+      if (this.queryWhere()) {
+        sql += ` WHERE ${this.queryWhere()}`;
+      }
+
+      if (this.queryOrder()) {
+        sql += ` ORDER BY ${this.queryOrder()}`;
+      }
+
+      if (this.queryLimit()) {
+        sql += ` LIMIT ${this.queryLimit()}`;
+      }
+
+      this.logger.info('Executing query:', sql);
+
+      const result = await this.api.callOrThrow('executeQuery', [sql]);
+      this.queryResult.set(result);
     } catch (error) {
-      this.queryError.set(error instanceof Error ? error.message : 'Query failed');
       this.logger.error('Query execution failed', error);
+      this.queryResult.set({ error: String(error) });
     } finally {
-      this.isExecuting.set(false);
+      this.isLoading.set(false);
     }
   }
 
   clearQuery(): void {
-    this.currentQuery.set('');
-    this.queryResults.set([]);
-    this.queryError.set(null);
-    this.queryDuration.set(0);
+    this.queryFields.set('*');
+    this.queryWhere.set('');
+    this.queryOrder.set('');
+    this.queryLimit.set(10);
+    this.queryResult.set(null);
   }
 
-  openCreateTableModal(): void {
-    this.showCreateTableModal.set(true);
-    this.newTableName.set('');
-    this.newTableColumns.set('');
-  }
-
-  closeCreateTableModal(): void {
-    this.showCreateTableModal.set(false);
-  }
-
-  async createTable(): Promise<void> {
-    if (!this.newTableName() || !this.newTableColumns()) return;
-    
-    try {
-      // In production, call actual API
-      // await this.api.callOrThrow('duckdb.createTable', [
-      //   this.newTableName(),
-      //   this.newTableColumns().split(',').map(c => c.trim())
-      // ]);
-      
-      this.logger.info('Table created', { name: this.newTableName() });
-      this.closeCreateTableModal();
-      this.loadTables();
-    } catch (error) {
-      this.logger.error('Failed to create table', error);
-    }
-  }
-
-  editTable(table: DuckDBTable): void {
-    this.logger.info('Edit table', table);
-    // Implement edit functionality
-  }
-
-  async deleteTable(table: DuckDBTable): Promise<void> {
-    if (!confirm(`Are you sure you want to delete table "${table.name}"?`)) return;
-    
-    try {
-      // In production, call actual API
-      // await this.api.callOrThrow('duckdb.deleteTable', [table.id]);
-      
-      this.logger.info('Table deleted', { name: table.name });
-      this.loadTables();
-    } catch (error) {
-      this.logger.error('Failed to delete table', error);
-    }
-  }
-
-  openQueryModal(): void {
-    this.logger.info('Open query modal');
-    // Implement query modal
-  }
-
-  refreshData(): void {
-    this.loadTables();
-    this.loadQueries();
-    this.logger.info('Data refreshed');
-  }
-
-  toggleDocs(): void {
-    this.showDocs.update(v => !v);
+  ngOnInit(): void {
+    this.loadUsers();
   }
 }

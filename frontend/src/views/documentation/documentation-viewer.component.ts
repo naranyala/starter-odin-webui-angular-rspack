@@ -107,45 +107,20 @@ export class DocumentationViewerComponent {
         {
           id: 'overview',
           title: 'Overview',
-          path: 'assets/docs/QUICKSTART.md',
+          path: 'assets/docs/README.md',
           content: this.getQuickStartOverview(),
         },
         {
           id: 'installation',
           title: 'Installation',
-          path: 'assets/docs/QUICKSTART.md#installation',
+          path: 'assets/docs/QUICKSTART.md',
           content: this.getQuickStartInstallation(),
         },
         {
           id: 'commands',
           title: 'Common Commands',
-          path: 'assets/docs/QUICKSTART.md#commands',
+          path: 'assets/docs/QUICKSTART.md',
           content: this.getQuickStartCommands(),
-        },
-      ],
-    },
-    {
-      id: 'dx',
-      title: 'Developer Experience',
-      icon: '⚡',
-      items: [
-        {
-          id: 'dx-summary',
-          title: 'DX Summary',
-          path: 'assets/docs/DX_SUMMARY.md',
-          content: this.getDXSummary(),
-        },
-        {
-          id: 'dx-improvements',
-          title: 'Improvement Plan',
-          path: 'assets/docs/DX_IMPROVEMENT_PLAN.md',
-          content: this.getDXImprovementPlan(),
-        },
-        {
-          id: 'makefile',
-          title: 'Makefile Guide',
-          path: 'assets/docs/MAKEFILE.md',
-          content: this.getMakefileGuide(),
         },
       ],
     },
@@ -166,12 +141,6 @@ export class DocumentationViewerComponent {
           path: 'assets/docs/CHANGELOG.md',
           content: this.getChangelog(),
         },
-        {
-          id: 'structural',
-          title: 'Structural Cleanup',
-          path: 'assets/docs/STRUCTURAL_CLEANUP_REPORT.md',
-          content: this.getStructuralCleanup(),
-        },
       ],
     },
     {
@@ -186,16 +155,16 @@ export class DocumentationViewerComponent {
           content: this.getBackendOverview(),
         },
         {
-          id: 'di-system',
-          title: 'DI System',
-          path: 'assets/docs/backend/01_DI_SYSTEM.md',
-          content: this.getDISystem(),
+          id: 'duckdb-integration',
+          title: 'DuckDB Integration',
+          path: 'assets/docs/backend/duckdb-integration.md',
+          content: this.getDuckDBIntegration(),
         },
         {
-          id: 'error-handling',
-          title: 'Error Handling',
-          path: 'assets/docs/backend/02_ERROR_HANDLING_GUIDE.md',
-          content: this.getErrorHandling(),
+          id: 'sqlite-integration',
+          title: 'SQLite Integration',
+          path: 'assets/docs/backend/sqlite-integration.md',
+          content: this.getSQLiteIntegration(),
         },
       ],
     },
@@ -207,14 +176,20 @@ export class DocumentationViewerComponent {
         {
           id: 'frontend-readme',
           title: 'Frontend Overview',
-          path: 'assets/docs/frontend/00-README.md',
+          path: 'assets/docs/frontend/README.md',
           content: this.getFrontendOverview(),
         },
         {
-          id: 'testing',
-          title: 'Testing Guide',
-          path: 'assets/docs/frontend/04-TESTING_GUIDE.md',
-          content: this.getTestingGuide(),
+          id: 'duckdb-components',
+          title: 'DuckDB Components',
+          path: 'assets/docs/frontend/duckdb-components.md',
+          content: this.getDuckDBComponents(),
+        },
+        {
+          id: 'sqlite-components',
+          title: 'SQLite Components',
+          path: 'assets/docs/frontend/sqlite-components.md',
+          content: this.getSQLiteComponents(),
         },
       ],
     },
@@ -224,16 +199,16 @@ export class DocumentationViewerComponent {
       icon: '📚',
       items: [
         {
-          id: 'webui',
-          title: 'WebUI Integration',
-          path: 'assets/docs/guides/README_WEBUI_INTEGRATION.md',
-          content: this.getWebUIIntegration(),
+          id: 'crud-operations',
+          title: 'CRUD Operations Guide',
+          path: 'assets/docs/guides/crud-operations-guide.md',
+          content: this.getCRUDOperationsGuide(),
         },
         {
-          id: 'data-transform',
-          title: 'Data Transform Services',
-          path: 'assets/docs/guides/ANGULAR_DATA_TRANSFORM_SERVICES.md',
-          content: this.getDataTransform(),
+          id: 'security',
+          title: 'Security Guide',
+          path: 'assets/docs/guides/README.md',
+          content: this.getSecurityGuide(),
         },
       ],
     },
@@ -848,5 +823,207 @@ hexEncode/Decode(data: Uint8Array)
 addRule(field, ruleType, message)
 validate<T>(data: T): ValidationResult
 \`\`\``;
+  }
+
+  private getDuckDBIntegration(): string {
+    return `# DuckDB Integration Guide
+
+## Overview
+
+Production-ready DuckDB integration for analytical workloads.
+
+## Features
+
+- Complete CRUD operations
+- Query builder support
+- Analytics functions
+- Thread-safe operations
+
+## Backend Implementation
+
+\`\`\`odin
+// Initialize DuckDB
+conn := database.init_connection(.DuckDB, "build/duckdb.db")
+
+// Execute query
+result := database.execute_query(&conn, "SELECT * FROM users")
+
+// Transaction support
+database.begin_transaction(&conn, .{})
+// ... operations
+database.commit_transaction(&conn)
+\`\`\`
+
+## Frontend Usage
+
+\`\`\`typescript
+const users = await api.callOrThrow<User[]>('getUsers');
+const stats = await api.callOrThrow<UserStats>('getUserStats');
+\`\`\``;
+  }
+
+  private getSQLiteIntegration(): string {
+    return `# SQLite Integration Guide
+
+## Overview
+
+Production-ready SQLite integration for transactional workloads.
+
+## Features
+
+- Complete CRUD operations
+- Transaction support
+- Lightweight storage
+- Embedded deployment ready
+
+## Backend Implementation
+
+\`\`\`odin
+// Initialize SQLite
+conn := database.init_connection(.SQLite, "build/sqlite.db")
+
+// Execute query
+result := database.execute_query(&conn, "SELECT * FROM products")
+
+// Transaction support
+database.begin_transaction(&conn, .{})
+// ... operations
+database.commit_transaction(&conn)
+\`\`\`
+
+## Frontend Usage
+
+\`\`\`typescript
+const products = await api.callOrThrow<Product[]>('sqlite:getProducts');
+const stats = await api.callOrThrow<ProductStats>('sqlite:getProductStats');
+\`\`\``;
+  }
+
+  private getCRUDOperationsGuide(): string {
+    return `# CRUD Operations Guide
+
+## Overview
+
+End-to-end tutorial for implementing CRUD operations with DuckDB and SQLite.
+
+## Backend CRUD
+
+\`\`\`odin
+// Create
+id, err := duckdb_create_user(&svc, &user)
+
+// Read
+users, err := duckdb_get_users(&svc)
+
+// Update
+err := duckdb_update_user(&svc, &user)
+
+// Delete
+err := duckdb_delete_user(&svc, user_id)
+\`\`\`
+
+## Frontend CRUD
+
+\`\`\`typescript
+// Create
+await api.callOrThrow('createUser', [user]);
+
+// Read
+const users = await api.callOrThrow<User[]>('getUsers');
+
+// Update
+await api.callOrThrow('updateUser', [user]);
+
+// Delete
+await api.callOrThrow('deleteUser', [userId]);
+\`\`\``;
+  }
+
+  private getSecurityGuide(): string {
+    return `# Security Guide
+
+## Overview
+
+Comprehensive security implementation for the application.
+
+## Security Features
+
+### Authentication
+- Session-based authentication
+- Rate limiting (5 attempts max)
+- Role-Based Access Control (RBAC)
+
+### Input Validation
+- Email validation
+- Password strength validation
+- SQL injection prevention
+- XSS prevention
+
+### Data Protection
+- Data masking
+- Secure logging
+- Sensitive field redaction
+
+## Security Tests
+
+65+ security tests covering:
+- Input validation
+- XSS prevention
+- SQL injection prevention
+- Authentication/Authorization
+- Rate limiting`;
+  }
+
+  private getDuckDBComponents(): string {
+    return `# DuckDB Components Guide
+
+## Overview
+
+Angular components for DuckDB CRUD operations.
+
+## Components
+
+### DuckdbDemoComponent
+Main DuckDB CRUD interface with:
+- Tab-based navigation
+- Real-time statistics
+- Query builder
+- User management
+
+### DuckdbUsersComponent
+User management table with:
+- Sorting
+- Pagination
+- Search/filter
+- Edit/Delete actions
+
+### DuckdbAnalyticsComponent
+Data analytics dashboard with:
+- Age distribution charts
+- Email domain analysis
+- Growth metrics`;
+  }
+
+  private getSQLiteComponents(): string {
+    return `# SQLite Components Guide
+
+## Overview
+
+Angular components for SQLite CRUD operations.
+
+## Components
+
+### SqliteCrudComponent
+Main SQLite CRUD interface with:
+- Tab-based navigation (List, Create)
+- Real-time statistics
+- Search/filter
+- Product management
+
+### Features
+- Category filtering
+- Stock level indicators
+- Price formatting
+- Status badges`;
   }
 }
